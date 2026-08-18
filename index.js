@@ -1,5 +1,6 @@
 /**
  * @format
+ * Entry point — gesture handler is imported first inside App.tsx
  */
 
 import { AppRegistry } from 'react-native';

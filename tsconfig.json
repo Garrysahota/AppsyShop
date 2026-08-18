@@ -1,5 +1,16 @@
 {
   "extends": "@react-native/typescript-config",
+  "compilerOptions": {
+    "strict": true,
+    "paths": {
+      "@features/*": ["./src/features/*"],
+      "@shared/*": ["./src/shared/*"],
+      "@theme": ["./src/theme/index.ts"],
+      "@theme/*": ["./src/theme/*"],
+      "@store/*": ["./src/store/*"],
+      "@app/*": ["./src/app/*"]
+    }
+  },
   "include": ["**/*.ts", "**/*.tsx"],
   "exclude": ["**/node_modules", "**/Pods"]
 }
