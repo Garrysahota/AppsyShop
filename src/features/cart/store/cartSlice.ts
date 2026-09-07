@@ -1,8 +1,3 @@
-/**
- * Cart Slice — AppsyShop
- * Manages bag items, quantities, pricing, discounts, and persistence.
- */
-
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { Product } from '@features/products/types';
 import { CartItem, CartState } from '../types';
@@ -11,7 +6,7 @@ const initialState: CartState = {
   items: [],
   appliedCoupon: null,
   discountPercentage: 0,
-  deliveryFee: 0, // Free 10-min drop delivery
+  deliveryFee: 0, 
 };
 
 const cartSlice = createSlice({

@@ -1,8 +1,3 @@
-/**
- * WishlistScreen — AppsyShop
- * Displays all sneakers saved to the user's wishlist via the heart button.
- */
-
 import React from 'react';
 import {
   ScrollView,
@@ -49,7 +44,7 @@ export const WishlistScreen: React.FC = () => {
         style={StyleSheet.absoluteFill}
       />
 
-      {/* Top Header Bar */}
+      {}
       <View
         style={[
           styles.topBar,
@@ -80,7 +75,7 @@ export const WishlistScreen: React.FC = () => {
         ]}>
         
         {favoritedProducts.length === 0 ? (
-          /* Empty Wishlist State */
+          
           <View style={styles.emptyContainer}>
             <View style={styles.emptyIconCircle}>
               <Heart
@@ -110,9 +105,9 @@ export const WishlistScreen: React.FC = () => {
             </TouchableOpacity>
           </View>
         ) : (
-          /* Wishlist Grid & Bulk Action */
+          
           <View>
-            {/* Action Banner */}
+            {}
             <View style={styles.actionBar}>
               <View style={styles.countBadge}>
                 <Sparkles size={12} color={colors.accent} />
@@ -130,7 +125,7 @@ export const WishlistScreen: React.FC = () => {
               </TouchableOpacity>
             </View>
 
-            {/* 2-Column Products Grid */}
+            {}
             <View style={styles.productsGrid}>
               {favoritedProducts.map(product => (
                 <View key={product.id} style={styles.gridColumn}>

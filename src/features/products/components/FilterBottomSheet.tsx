@@ -1,9 +1,3 @@
-/**
- * FilterBottomSheet — AppsyShop
- * Glassmorphic filter bottom sheet modal with smooth 2-stop snap points (Half ~55% & Full ~88%),
- * gesture drag support, and comprehensive sneaker filtering.
- */
-
 import React, { useEffect, useRef, useState } from 'react';
 import {
   Animated,
@@ -42,9 +36,8 @@ import {
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
-// 2 Snap point heights (from bottom)
-const SNAP_HALF = SCREEN_HEIGHT * 0.58;
-const SNAP_FULL = SCREEN_HEIGHT * 0.88;
+const SNAP_HALF = SCREEN_HEIGHT * 0.62;
+const SNAP_FULL = SCREEN_HEIGHT * 0.90;
 
 interface FilterBottomSheetProps {
   visible: boolean;
@@ -64,10 +57,10 @@ const SORT_OPTIONS: { id: SortOption; label: string }[] = [
 
 const PRICE_TIERS: { id: PriceRangeTier; label: string }[] = [
   { id: 'all', label: 'All Prices' },
-  { id: 'under_150', label: 'Under $150' },
-  { id: '150_250', label: '$150 - $250' },
-  { id: '250_350', label: '$250 - $350' },
-  { id: 'above_350', label: '$350+' },
+  { id: 'under_150', label: 'Under ₹12,000' },
+  { id: '150_250', label: '₹12,000 - ₹20,000' },
+  { id: '250_350', label: '₹20,000 - ₹30,000' },
+  { id: 'above_350', label: '₹30,000+' },
 ];
 
 export const FilterBottomSheet: React.FC<FilterBottomSheetProps> = ({
@@ -79,80 +72,62 @@ export const FilterBottomSheet: React.FC<FilterBottomSheetProps> = ({
   const allProducts = useAppSelector(state => state.products.items);
   const currentFilters = useAppSelector(state => state.products.filters);
 
-  // Local copy of filters while modal is open
   const [localFilters, setLocalFilters] = useState<ProductFilters>(currentFilters);
   const [currentSnap, setCurrentSnap] = useState<'half' | 'full'>('half');
 
-  // Animation values
-  const translateY = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
+  const translateY = useRef(new Animated.Value(SNAP_FULL)).current;
   const backdropOpacity = useRef(new Animated.Value(0)).current;
 
-  // Sync filters whenever sheet opens
   useEffect(() => {
     if (visible) {
       setLocalFilters(currentFilters);
       setCurrentSnap('half');
+      translateY.setValue(SNAP_FULL);
+      backdropOpacity.setValue(0);
       snapTo(SNAP_HALF);
-    } else {
-      Animated.parallel([
-        Animated.timing(translateY, {
-          toValue: SCREEN_HEIGHT,
-          duration: 250,
-          useNativeDriver: true,
-        }),
-        Animated.timing(backdropOpacity, {
-          toValue: 0,
-          duration: 200,
-          useNativeDriver: true,
-        }),
-      ]).start();
     }
   }, [visible]);
 
-  const snapTo = (snapHeight: number) => {
-    const targetTranslate = SCREEN_HEIGHT - snapHeight;
+  const snapTo = (targetHeight: number) => {
+    const targetTranslateY = SNAP_FULL - targetHeight;
     Animated.parallel([
       Animated.spring(translateY, {
-        toValue: targetTranslate,
+        toValue: targetTranslateY,
         tension: 65,
         friction: 11,
         useNativeDriver: true,
       }),
       Animated.timing(backdropOpacity, {
         toValue: 1,
-        duration: 250,
+        duration: 220,
         useNativeDriver: true,
       }),
     ]).start();
   };
 
-  // Pan Responder for drag handle
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: (_, gestureState) => Math.abs(gestureState.dy) > 5,
+      onMoveShouldSetPanResponder: (_, gestureState) => Math.abs(gestureState.dy) > 6,
       onPanResponderMove: (_, gestureState) => {
-        const baseHeight = currentSnap === 'full' ? SNAP_FULL : SNAP_HALF;
-        const currentTranslate = SCREEN_HEIGHT - baseHeight + gestureState.dy;
-        if (currentTranslate >= SCREEN_HEIGHT - SNAP_FULL) {
-          translateY.setValue(currentTranslate);
+        const baseTranslateY = currentSnap === 'full' ? 0 : SNAP_FULL - SNAP_HALF;
+        const newTranslate = baseTranslateY + gestureState.dy;
+        if (newTranslate >= -20 && newTranslate <= SNAP_FULL) {
+          translateY.setValue(newTranslate);
         }
       },
       onPanResponderRelease: (_, gestureState) => {
         if (gestureState.dy > 120) {
-          // Dragged down significantly
-          if (currentSnap === 'full' && gestureState.dy < 250) {
+          if (currentSnap === 'full' && gestureState.dy < 240) {
             setCurrentSnap('half');
             snapTo(SNAP_HALF);
           } else {
             handleClose();
           }
         } else if (gestureState.dy < -60) {
-          // Dragged up
           setCurrentSnap('full');
           snapTo(SNAP_FULL);
         } else {
-          // Return to current snap
           snapTo(currentSnap === 'full' ? SNAP_FULL : SNAP_HALF);
         }
       },
@@ -162,8 +137,8 @@ export const FilterBottomSheet: React.FC<FilterBottomSheetProps> = ({
   const handleClose = () => {
     Animated.parallel([
       Animated.timing(translateY, {
-        toValue: SCREEN_HEIGHT,
-        duration: 220,
+        toValue: SNAP_FULL,
+        duration: 200,
         useNativeDriver: true,
       }),
       Animated.timing(backdropOpacity, {
@@ -185,7 +160,6 @@ export const FilterBottomSheet: React.FC<FilterBottomSheetProps> = ({
     setLocalFilters(DEFAULT_FILTERS);
   };
 
-  // Toggle brand
   const toggleBrand = (brand: string) => {
     setLocalFilters(prev => {
       const exists = prev.selectedBrands.includes(brand);
@@ -198,7 +172,6 @@ export const FilterBottomSheet: React.FC<FilterBottomSheetProps> = ({
     });
   };
 
-  // Toggle size
   const toggleSize = (size: number) => {
     setLocalFilters(prev => {
       const exists = prev.selectedSizes.includes(size);
@@ -211,16 +184,15 @@ export const FilterBottomSheet: React.FC<FilterBottomSheetProps> = ({
     });
   };
 
-  // Live match calculation
   const matchingCount = allProducts.filter(item => {
-    // Brand
+    
     if (
       localFilters.selectedBrands.length > 0 &&
       !localFilters.selectedBrands.includes(item.brand)
     ) {
       return false;
     }
-    // Price
+    
     if (localFilters.priceRange === 'under_150' && item.price >= 150) return false;
     if (
       localFilters.priceRange === '150_250' &&
@@ -236,7 +208,6 @@ export const FilterBottomSheet: React.FC<FilterBottomSheetProps> = ({
     }
     if (localFilters.priceRange === 'above_350' && item.price <= 350) return false;
 
-    // Sizes
     if (
       localFilters.selectedSizes.length > 0 &&
       !localFilters.selectedSizes.some(s => item.sizes.includes(s))
@@ -244,7 +215,6 @@ export const FilterBottomSheet: React.FC<FilterBottomSheetProps> = ({
       return false;
     }
 
-    // Toggles
     if (localFilters.onlyHotDrops && !item.isHotDrop) return false;
     if (localFilters.onlyDiscounted && !item.discountPercentage) return false;
     if (localFilters.onlyInStock && item.stockLeft !== undefined && item.stockLeft <= 0) {
@@ -263,7 +233,7 @@ export const FilterBottomSheet: React.FC<FilterBottomSheetProps> = ({
       animationType="none"
       onRequestClose={handleClose}>
       <View style={styles.modalOverlay}>
-        {/* Backdrop */}
+        {}
         <TouchableWithoutFeedback onPress={handleClose}>
           <Animated.View
             style={[
@@ -278,15 +248,17 @@ export const FilterBottomSheet: React.FC<FilterBottomSheetProps> = ({
           />
         </TouchableWithoutFeedback>
 
-        {/* Animated Sheet Container */}
+        {}
         <Animated.View
           style={[
             styles.sheetContainer,
             {
-              transform: [{ translateY }],
+              height: SNAP_FULL,
+              transform: [{ translateY: translateY }],
+              paddingBottom: Math.max(insets.bottom, 14),
             },
           ]}>
-          {/* Drag Handle Bar */}
+          {}
           <View {...panResponder.panHandlers} style={styles.dragHandleArea}>
             <View style={styles.dragPill} />
             <Text style={styles.dragStopHint}>
@@ -294,7 +266,7 @@ export const FilterBottomSheet: React.FC<FilterBottomSheetProps> = ({
             </Text>
           </View>
 
-          {/* Header */}
+          {}
           <View style={styles.header}>
             <View style={styles.headerTitleRow}>
               <SlidersHorizontal size={18} color={colors.accent} />
@@ -320,13 +292,13 @@ export const FilterBottomSheet: React.FC<FilterBottomSheetProps> = ({
             </View>
           </View>
 
-          {/* Scrollable Filter Sections */}
+          {}
           <ScrollView
             style={styles.scrollView}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.scrollContent}>
             
-            {/* ─── 1. Sort By ──────────────────────────────────────────────── */}
+            {}
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>SORT BY</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.pillsRow}>
@@ -351,7 +323,7 @@ export const FilterBottomSheet: React.FC<FilterBottomSheetProps> = ({
               </ScrollView>
             </View>
 
-            {/* ─── 2. Brands ───────────────────────────────────────────────── */}
+            {}
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>POPULAR BRANDS</Text>
               <View style={styles.wrapGrid}>
@@ -379,7 +351,7 @@ export const FilterBottomSheet: React.FC<FilterBottomSheetProps> = ({
               </View>
             </View>
 
-            {/* ─── 3. Price Range ──────────────────────────────────────────── */}
+            {}
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>PRICE TIER</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.pillsRow}>
@@ -404,9 +376,9 @@ export const FilterBottomSheet: React.FC<FilterBottomSheetProps> = ({
               </ScrollView>
             </View>
 
-            {/* ─── 4. Shoe Sizes ───────────────────────────────────────────── */}
+            {}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>SIZE (US MEN'S)</Text>
+              <Text style={styles.sectionTitle}>SIZE (UK / INDIA STANDARD)</Text>
               <View style={styles.sizeGrid}>
                 {SIZES.map(size => {
                   const isSelected = localFilters.selectedSizes.includes(size);
@@ -418,7 +390,7 @@ export const FilterBottomSheet: React.FC<FilterBottomSheetProps> = ({
                       style={[styles.sizeBox, isSelected && styles.sizeBoxActive]}>
                       <Text
                         style={[styles.sizeBoxText, isSelected && styles.sizeBoxTextActive]}>
-                        {size}
+                        UK {size}
                       </Text>
                     </TouchableOpacity>
                   );
@@ -426,11 +398,11 @@ export const FilterBottomSheet: React.FC<FilterBottomSheetProps> = ({
               </View>
             </View>
 
-            {/* ─── 5. Quick Badges / Toggles ───────────────────────────────── */}
+            {}
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>DROP PERKS & STATUS</Text>
               
-              {/* Hot Drops Toggle */}
+              {}
               <TouchableOpacity
                 activeOpacity={0.75}
                 onPress={() =>
@@ -453,7 +425,7 @@ export const FilterBottomSheet: React.FC<FilterBottomSheetProps> = ({
                 </View>
               </TouchableOpacity>
 
-              {/* Discounted Toggle */}
+              {}
               <TouchableOpacity
                 activeOpacity={0.75}
                 onPress={() =>
@@ -479,7 +451,7 @@ export const FilterBottomSheet: React.FC<FilterBottomSheetProps> = ({
                 </View>
               </TouchableOpacity>
 
-              {/* In Stock Toggle */}
+              {}
               <TouchableOpacity
                 activeOpacity={0.75}
                 onPress={() =>
@@ -507,7 +479,7 @@ export const FilterBottomSheet: React.FC<FilterBottomSheetProps> = ({
             </View>
           </ScrollView>
 
-          {/* Sticky Apply Footer */}
+          {}
           <View style={styles.footer}>
             <TouchableOpacity
               activeOpacity={0.85}
@@ -519,7 +491,7 @@ export const FilterBottomSheet: React.FC<FilterBottomSheetProps> = ({
                 end={{ x: 1, y: 0 }}
                 style={styles.applyButton}>
                 <Text style={styles.applyButtonText}>
-                  Show {matchingCount} {matchingCount === 1 ? 'Kick' : 'Kicks'} ⚡
+                  Apply Filters • Show {matchingCount} {matchingCount === 1 ? 'Kick' : 'Kicks'} ⚡
                 </Text>
               </LinearGradient>
             </TouchableOpacity>
@@ -544,7 +516,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#000000',
   },
   sheetContainer: {
-    height: SNAP_FULL,
     backgroundColor: '#161026',
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
@@ -555,7 +526,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.5,
     shadowRadius: 20,
     elevation: 24,
-    flexDirection: 'column',
+    overflow: 'hidden',
   },
   scrollView: {
     flex: 1,
@@ -626,7 +597,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: spacing.screenPadding,
     paddingTop: spacing.md,
-    paddingBottom: spacing.xxl,
+    paddingBottom: spacing.lg,
   },
   section: {
     marginBottom: spacing.lg,
@@ -761,14 +732,14 @@ const styles = StyleSheet.create({
   },
   footer: {
     paddingHorizontal: spacing.screenPadding,
-    paddingTop: spacing.sm,
-    paddingBottom: spacing.lg,
+    paddingTop: 12,
+    paddingBottom: 6,
     backgroundColor: '#161026',
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.08)',
+    borderTopColor: 'rgba(255, 255, 255, 0.1)',
   },
   applyButtonContainer: {
-    borderRadius: spacing.cardRadius,
+    borderRadius: spacing.cardRadius - 4,
     overflow: 'hidden',
   },
   applyButton: {

@@ -1,11 +1,7 @@
-/**
- * OrderSuccessScreen — AppsyShop
- * Celebratory order placed confirmation with live countdown and one-tap tracking.
- */
-
 import React from 'react';
 import {
   Dimensions,
+  Platform,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -27,6 +23,7 @@ import {
 } from 'lucide-react-native';
 import { colors, spacing, typography } from '@theme';
 import type { RootStackParamList } from '@app/navigation/types';
+import { formatINR } from '@shared/utils/currency';
 
 type OrderSuccessRouteProp = RouteProp<RootStackParamList, 'OrderSuccess'>;
 
@@ -38,6 +35,7 @@ export const OrderSuccessScreen: React.FC = () => {
   const orderId = route.params?.orderId || '#SNK-8821';
   const total = route.params?.total || 380;
   const itemsCount = route.params?.itemsCount || 1;
+  const razorpayPaymentId = route.params?.razorpayPaymentId;
 
   const handleTrackDrop = () => {
     navigation.reset({
@@ -77,7 +75,7 @@ export const OrderSuccessScreen: React.FC = () => {
           },
         ]}>
         
-        {/* Celebration Icon */}
+        {}
         <View style={styles.iconCircle}>
           <LinearGradient
             colors={['#EC4899', '#7C3AED']}
@@ -89,13 +87,13 @@ export const OrderSuccessScreen: React.FC = () => {
           </View>
         </View>
 
-        {/* Title */}
+        {}
         <Text style={styles.title}>DROP CONFIRMED! ⚡</Text>
         <Text style={styles.subtitle}>
           Your order has been sent to our local warehouse team for immediate packing.
         </Text>
 
-        {/* Order Details Card */}
+        {}
         <View style={styles.orderCard}>
           <View style={styles.orderCardHeader}>
             <View>
@@ -104,13 +102,29 @@ export const OrderSuccessScreen: React.FC = () => {
             </View>
             <View style={styles.paidBadge}>
               <CheckCircle2 size={12} color={colors.success} />
-              <Text style={styles.paidText}>PAID ${total}</Text>
+              <Text style={styles.paidText}>PAID {formatINR(total)}</Text>
             </View>
           </View>
 
+          {}
+          {Boolean(razorpayPaymentId) && (
+            <View style={styles.razorpayVerifiedRow}>
+              <View style={styles.rzpBadgeLogo}>
+                <Text style={styles.rzpBadgeLogoText}>R</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.rzpVerifiedLabel}>RAZORPAY TRANSACTION VERIFIED</Text>
+                <Text style={styles.rzpPaymentIdText}>{razorpayPaymentId}</Text>
+              </View>
+              <View style={styles.demoTag}>
+                <Text style={styles.demoTagText}>DEMO</Text>
+              </View>
+            </View>
+          )}
+
           <View style={styles.divider} />
 
-          {/* ETA & Drop Status */}
+          {}
           <View style={styles.etaRow}>
             <View style={styles.etaIconBox}>
               <Clock size={20} color={colors.accent} />
@@ -123,7 +137,7 @@ export const OrderSuccessScreen: React.FC = () => {
             </View>
           </View>
 
-          {/* Security Tag Notice */}
+          {}
           <View style={styles.nfcNotice}>
             <ShieldCheck size={14} color={colors.accent} />
             <Text style={styles.nfcText}>
@@ -134,7 +148,7 @@ export const OrderSuccessScreen: React.FC = () => {
 
         <View style={styles.spacer} />
 
-        {/* Actions */}
+        {}
         <TouchableOpacity
           style={styles.trackButton}
           activeOpacity={0.85}
@@ -253,6 +267,56 @@ const styles = StyleSheet.create({
     color: colors.success,
     fontSize: 11,
     fontWeight: typography.fontWeight.bold,
+  },
+  razorpayVerifiedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(11, 103, 212, 0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(11, 103, 212, 0.35)',
+    borderRadius: 10,
+    padding: 10,
+    marginTop: 10,
+    gap: 10,
+  },
+  rzpBadgeLogo: {
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    backgroundColor: '#0B67D4',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  rzpBadgeLogoText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '900',
+  },
+  rzpVerifiedLabel: {
+    color: '#60A5FA',
+    fontSize: 8,
+    fontWeight: '800',
+    letterSpacing: 0.6,
+  },
+  rzpPaymentIdText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '700',
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+    marginTop: 1,
+  },
+  demoTag: {
+    backgroundColor: 'rgba(245, 158, 11, 0.2)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: '#F59E0B',
+  },
+  demoTagText: {
+    color: '#FBBF24',
+    fontSize: 8,
+    fontWeight: '900',
   },
   divider: {
     height: 1,

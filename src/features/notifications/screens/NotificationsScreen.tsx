@@ -1,9 +1,3 @@
-/**
- * NotificationsScreen — AppsyShop
- * Flagship notifications hub with drop alerts, rider delivery tracking, promo codes,
- * and category filtering.
- */
-
 import React from 'react';
 import {
   ScrollView,
@@ -111,7 +105,7 @@ export const NotificationsScreen: React.FC = () => {
         style={StyleSheet.absoluteFill}
       />
 
-      {/* Top Header Bar */}
+      {}
       <View
         style={[
           styles.topBar,
@@ -143,7 +137,7 @@ export const NotificationsScreen: React.FC = () => {
         )}
       </View>
 
-      {/* Filter Tabs Bar */}
+      {}
       <View style={styles.categoriesWrapper}>
         <ScrollView
           horizontal
@@ -184,7 +178,7 @@ export const NotificationsScreen: React.FC = () => {
         ]}>
         
         {filteredItems.length === 0 ? (
-          /* Empty Notifications */
+          
           <View style={styles.emptyContainer}>
             <View style={styles.emptyIconCircle}>
               <Bell size={44} color={colors.primaryGradientEnd} />

@@ -1,9 +1,3 @@
-/**
- * Onboarding Redux slice — AppsyShop
- * Tracks whether the user has completed the onboarding flow.
- * Persisted via MMKV so the splash → onboarding flow only shows once.
- */
-
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 
 interface OnboardingState {

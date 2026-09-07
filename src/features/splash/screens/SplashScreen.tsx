@@ -1,11 +1,3 @@
-/**
- * SplashScreen — AppsyShop
- * Animated brand intro. Shows for 2.5s, then routes to Onboarding or Main
- * based on persisted Redux state.
- *
- * States handled: Loading (animation) only — no empty/error (always shows brand).
- */
-
 import React, { useEffect, useRef } from 'react';
 import {
   Animated,
@@ -35,7 +27,6 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ navigation }) => {
     (state) => state.onboarding.hasSeenOnboarding,
   );
 
-  // ─── Animations ────────────────────────────────────────────────────────
   const logoScale = useRef(new Animated.Value(0.2)).current;
   const logoOpacity = useRef(new Animated.Value(0)).current;
   const taglineOpacity = useRef(new Animated.Value(0)).current;
@@ -45,7 +36,7 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ navigation }) => {
   const dot3Anim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    // Logo spring entrance
+    
     Animated.sequence([
       Animated.parallel([
         Animated.spring(logoScale, {
@@ -60,13 +51,13 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ navigation }) => {
           useNativeDriver: true,
         }),
       ]),
-      // Tagline fades in after logo
+      
       Animated.timing(taglineOpacity, {
         toValue: 1,
         duration: 400,
         useNativeDriver: true,
       }),
-      // Loading dots appear
+      
       Animated.timing(dotOpacity, {
         toValue: 1,
         duration: 300,
@@ -74,7 +65,6 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ navigation }) => {
       }),
     ]).start();
 
-    // Loading dot pulse loop
     const dotPulse = Animated.loop(
       Animated.sequence([
         Animated.timing(dot1Anim, { toValue: 1, duration: 300, useNativeDriver: true }),
@@ -89,7 +79,6 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ navigation }) => {
     );
     dotPulse.start();
 
-    // Navigate after 2.5s
     const timer = setTimeout(() => {
       dotPulse.stop();
       if (hasSeenOnboarding) {
@@ -103,7 +92,7 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ navigation }) => {
       clearTimeout(timer);
       dotPulse.stop();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    
   }, []);
 
   const makeDotStyle = (anim: Animated.Value) => ({
@@ -118,26 +107,26 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ navigation }) => {
       end={{ x: 0.9, y: 1 }}
       style={styles.container}>
 
-      {/* ── Decorative floating circles ── */}
+      {}
       <View style={[styles.circle, styles.circleTopRight]} />
       <View style={[styles.circle, styles.circleBottomLeft]} />
       <View style={[styles.circleSm, styles.circleTopLeft]} />
 
-      {/* ── Center Logo Block ── */}
+      {}
       <Animated.View
         style={[
           styles.logoBlock,
           { opacity: logoOpacity, transform: [{ scale: logoScale }] },
         ]}>
 
-        {/* Logo mark — geometric A monogram */}
+        {}
         <View style={styles.logoMark}>
           <View style={styles.logoMarkInner}>
             <Text style={styles.logoMarkText}>A</Text>
           </View>
         </View>
 
-        {/* Wordmark */}
+        {}
         <View style={styles.wordmarkRow}>
           <Text style={styles.wordmarkAppsy}>APPSY</Text>
           <View style={styles.wordmarkShopContainer}>
@@ -145,13 +134,13 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ navigation }) => {
           </View>
         </View>
 
-        {/* Tagline */}
+        {}
         <Animated.Text style={[styles.tagline, { opacity: taglineOpacity }]}>
           Step Into Style
         </Animated.Text>
       </Animated.View>
 
-      {/* ── Loading dots ── */}
+      {}
       <Animated.View
         style={[
           styles.dotsRow,
@@ -172,7 +161,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
 
-  // ── Decorative Circles ──────────────────────────────────────────────────
   circle: {
     position: 'absolute',
     width: width * 0.75,
@@ -204,7 +192,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
 
-  // ── Logo ───────────────────────────────────────────────────────────────
   logoBlock: {
     alignItems: 'center',
   },
@@ -265,7 +252,6 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
   },
 
-  // ── Loading Dots ────────────────────────────────────────────────────────
   dotsRow: {
     position: 'absolute',
     flexDirection: 'row',

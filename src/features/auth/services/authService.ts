@@ -1,178 +1,287 @@
-/**
- * Auth Service — AppsyShop
- * Pluggable Authentication Service supporting Firebase Auth with fallback/offline capability.
- */
-
+import {
+  createUserWithEmailAndPassword,
+  getAuth,
+  getIdToken,
+  GoogleAuthProvider,
+  sendPasswordResetEmail,
+  signInWithCredential,
+  signInWithEmailAndPassword,
+  signOut,
+  updateProfile,
+  User,
+} from '@react-native-firebase/auth';
+import { doc, getFirestore, serverTimestamp, setDoc } from '@react-native-firebase/firestore';
+import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
 import { AuthResponse, LoginCredentials, RegisterCredentials, UserInfo } from '../types';
 
-/**
- * Simulates network latency for realistic feel in dev mode.
- */
-const delay = (ms: number): Promise<void> => new Promise(resolve => setTimeout(resolve, ms));
+const GOOGLE_WEB_CLIENT_ID = '83401155353-puea2d6tld9qjirn6mb9kf69081pbbme.apps.googleusercontent.com';
 
-const encodeBase64 = (str: string): string => {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';
-  let output = '';
-  for (
-    let block = 0, charCode, i = 0, map = chars;
-    str.charAt(i | 0) || ((map = '='), i % 1);
-    output += map.charAt(63 & (block >> (8 - (i % 1) * 8)))
-  ) {
-    charCode = str.charCodeAt((i += 3 / 4));
-    if (charCode > 0xff) {
-      throw new Error('String contains characters outside of the Latin1 range');
-    }
-    block = (block << 8) | charCode;
+try {
+  GoogleSignin.configure({
+    webClientId: GOOGLE_WEB_CLIENT_ID,
+    offlineAccess: false,
+  });
+} catch (e) {
+  console.warn('[GoogleSignin] configure error:', e);
+}
+
+const mapFirebaseAuthError = (error: any): string => {
+  const code = error?.code || '';
+  switch (code) {
+    case 'auth/invalid-credential':
+    case 'auth/user-not-found':
+    case 'auth/wrong-password':
+      return 'Invalid email or password. Please check your credentials.';
+    case 'auth/email-already-in-use':
+      return 'This email address is already in use. Please sign in instead.';
+    case 'auth/invalid-email':
+      return 'The email address is badly formatted.';
+    case 'auth/weak-password':
+      return 'Password is too weak. Please use at least 6 characters.';
+    case 'auth/user-disabled':
+      return 'This user account has been disabled. Please contact support.';
+    case 'auth/network-request-failed':
+      return 'Network error. Please check your internet connection.';
+    case 'auth/too-many-requests':
+      return 'Too many failed attempts. Please try again in a few minutes.';
+    default:
+      return error?.message || 'Authentication failed. Please try again.';
   }
-  return output;
 };
 
-/**
- * Generates a mock JWT token for testing/demo environments.
- */
-const generateMockToken = (uid: string): string => {
-  const header = encodeBase64(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
-  const payload = encodeBase64(
-    JSON.stringify({
-      sub: uid,
-      iss: 'https://securetoken.google.com/appsyshop-firebase',
-      aud: 'appsyshop-firebase',
-      auth_time: Math.floor(Date.now() / 1000),
-      user_id: uid,
-      exp: Math.floor(Date.now() / 1000) + 3600 * 24 * 7,
-    }),
-  );
-  const signature = 'simulated_signature_' + Date.now();
-  return `${header}.${payload}.${signature}`;
+const formatFirebaseUser = (firebaseUser: User): UserInfo => ({
+  uid: firebaseUser.uid,
+  email: firebaseUser.email || '',
+  displayName: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Sneakerhead',
+  photoURL:
+    firebaseUser.photoURL ||
+    `https://api.dicebear.com/7.x/bottts/png?seed=${firebaseUser.email || firebaseUser.uid}`,
+  phoneNumber: firebaseUser.phoneNumber,
+  createdAt: firebaseUser.metadata.creationTime,
+  emailVerified: firebaseUser.emailVerified,
+});
+
+const syncUserProfileToFirestore = async (
+  firebaseUser: User,
+  additionalData: Partial<UserInfo> = {},
+): Promise<void> => {
+  try {
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Firestore sync timeout')), 3000),
+    );
+
+    const syncPromise = (async () => {
+      const db = getFirestore();
+      const userRef = doc(db, 'users', firebaseUser.uid);
+      await setDoc(
+        userRef,
+        {
+          uid: firebaseUser.uid,
+          email: firebaseUser.email,
+          displayName: additionalData.displayName || firebaseUser.displayName,
+          photoURL: additionalData.photoURL || firebaseUser.photoURL,
+          lastLoginAt: serverTimestamp(),
+          createdAt: firebaseUser.metadata.creationTime || new Date().toISOString(),
+        },
+        { merge: true },
+      );
+    })();
+
+    await Promise.race([syncPromise, timeoutPromise]);
+  } catch (err) {
+    console.log('[Firestore] Non-critical user sync notice:', err);
+  }
 };
 
 class AuthService {
-  /**
-   * Sign in with Email & Password
-   */
+  
   async loginWithEmail(credentials: LoginCredentials): Promise<AuthResponse> {
-    await delay(1200);
-
-    const email = credentials.email.trim().toLowerCase();
+    const email = credentials.email.trim();
     const password = credentials.password;
 
     if (!email || !password) {
       throw new Error('Please provide both email and password.');
     }
 
-    if (password.length < 6) {
-      throw new Error('Password must be at least 6 characters.');
+    try {
+      const auth = getAuth();
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const firebaseUser = userCredential.user;
+      const token = await getIdToken(firebaseUser);
+
+      syncUserProfileToFirestore(firebaseUser).catch(() => {});
+
+      return {
+        user: formatFirebaseUser(firebaseUser),
+        token,
+      };
+    } catch (error: any) {
+      throw new Error(mapFirebaseAuthError(error));
     }
-
-    const uid = 'usr_' + Math.random().toString(36).substring(2, 10);
-    const user: UserInfo = {
-      uid,
-      email,
-      displayName: email.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
-      photoURL: `https://api.dicebear.com/7.x/bottts/png?seed=${email}`,
-      createdAt: new Date().toISOString(),
-      emailVerified: true,
-    };
-
-    const token = generateMockToken(uid);
-
-    return {
-      user,
-      token,
-      refreshToken: 'refresh_' + uid,
-    };
   }
 
-  /**
-   * Sign up with Full Name, Email & Password
-   */
   async registerWithEmail(credentials: RegisterCredentials): Promise<AuthResponse> {
-    await delay(1400);
-
-    const email = credentials.email.trim().toLowerCase();
+    const email = credentials.email.trim();
     const fullName = credentials.fullName.trim();
     const password = credentials.password;
 
     if (!fullName) {
       throw new Error('Please enter your full name.');
     }
-    if (!email || !email.includes('@')) {
+    if (!email) {
       throw new Error('Please enter a valid email address.');
     }
     if (password.length < 6) {
       throw new Error('Password must be at least 6 characters long.');
     }
 
-    const uid = 'usr_' + Math.random().toString(36).substring(2, 10);
-    const user: UserInfo = {
-      uid,
-      email,
-      displayName: fullName,
-      photoURL: `https://api.dicebear.com/7.x/bottts/png?seed=${email}`,
-      createdAt: new Date().toISOString(),
-      emailVerified: false,
-    };
+    try {
+      const auth = getAuth();
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const firebaseUser = userCredential.user;
 
-    const token = generateMockToken(uid);
+      const photoURL = `https://api.dicebear.com/7.x/bottts/png?seed=${email}`;
 
-    return {
-      user,
-      token,
-      refreshToken: 'refresh_' + uid,
-    };
+      await updateProfile(firebaseUser, {
+        displayName: fullName,
+        photoURL,
+      });
+
+      const token = await getIdToken(firebaseUser);
+
+      syncUserProfileToFirestore(firebaseUser, {
+        displayName: fullName,
+        photoURL,
+      }).catch(() => {});
+
+      return {
+        user: {
+          ...formatFirebaseUser(firebaseUser),
+          displayName: fullName,
+          photoURL,
+        },
+        token,
+      };
+    } catch (error: any) {
+      throw new Error(mapFirebaseAuthError(error));
+    }
   }
 
-  /**
-   * Send Password Reset Email
-   */
   async sendPasswordResetEmail(email: string): Promise<{ success: boolean; message: string }> {
-    await delay(1000);
-
-    const cleanEmail = email.trim().toLowerCase();
-    if (!cleanEmail || !cleanEmail.includes('@')) {
+    const cleanEmail = email.trim();
+    if (!cleanEmail) {
       throw new Error('Please enter a valid email address.');
     }
 
-    return {
-      success: true,
-      message: `Password reset instructions have been sent to ${cleanEmail}.`,
-    };
+    try {
+      const auth = getAuth();
+      await sendPasswordResetEmail(auth, cleanEmail);
+      return {
+        success: true,
+        message: `Password reset link has been sent to ${cleanEmail}. Check your inbox.`,
+      };
+    } catch (error: any) {
+      throw new Error(mapFirebaseAuthError(error));
+    }
   }
 
-  /**
-   * Social Authentication (Google / Apple)
-   */
   async loginWithSocial(provider: 'google' | 'apple'): Promise<AuthResponse> {
-    await delay(1000);
+    if (provider === 'google') {
+      try {
+        console.log('[Google Auth] Starting Google Sign-In...');
+        await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+        
+        const signInResult = await GoogleSignin.signIn();
+        console.log('[Google Auth] Sign-in result received:', JSON.stringify(signInResult));
 
-    const uid = `usr_${provider}_` + Math.random().toString(36).substring(2, 10);
-    const isGoogle = provider === 'google';
+        if ((signInResult as any)?.type === 'cancelled') {
+          throw new Error('Google Sign-In was cancelled.');
+        }
 
-    const user: UserInfo = {
-      uid,
-      email: isGoogle ? 'sneakerhead.google@example.com' : 'apple.user@icloud.com',
-      displayName: isGoogle ? 'Alex Mercer (Google)' : 'Alex Mercer (Apple)',
-      photoURL: isGoogle
-        ? 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150'
-        : 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=150',
-      createdAt: new Date().toISOString(),
-      emailVerified: true,
-    };
+        let idToken: string | null = null;
+        if (signInResult && typeof signInResult === 'object') {
+          if ('data' in signInResult && signInResult.data) {
+            idToken = (signInResult.data as any).idToken;
+          } else if ('idToken' in signInResult) {
+            idToken = (signInResult as any).idToken;
+          }
+        }
 
-    const token = generateMockToken(uid);
+        if (!idToken) {
+          console.log('[Google Auth] Fetching tokens via getTokens()...');
+          const tokens = await GoogleSignin.getTokens();
+          idToken = tokens.idToken;
+        }
 
-    return {
-      user,
-      token,
-      refreshToken: 'refresh_' + uid,
-    };
+        if (!idToken) {
+          throw new Error('Google Sign-In failed to retrieve identity token.');
+        }
+
+        console.log('[Google Auth] Authenticating with Firebase...');
+        const googleCredential = GoogleAuthProvider.credential(idToken);
+        const auth = getAuth();
+        const userCredential = await signInWithCredential(auth, googleCredential);
+        const firebaseUser = userCredential.user;
+        const token = await getIdToken(firebaseUser);
+
+        console.log('[Google Auth] Firebase login successful for:', firebaseUser.email);
+
+        syncUserProfileToFirestore(firebaseUser).catch(() => {});
+
+        return {
+          user: formatFirebaseUser(firebaseUser),
+          token,
+        };
+      } catch (error: any) {
+        console.error('[Google Auth Error]:', error);
+        if (error.code === statusCodes.SIGN_IN_CANCELLED) {
+          throw new Error('Google Sign-In was cancelled.');
+        } else if (error.code === statusCodes.IN_PROGRESS) {
+          throw new Error('Google Sign-In is already in progress.');
+        } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
+          throw new Error('Google Play Services is not available or outdated on this device.');
+        } else if (String(error).includes('DEVELOPER_ERROR') || String(error?.code) === '10') {
+          throw new Error('Google Sign-In SHA-1 Mismatch (DEVELOPER_ERROR): Please register your APK Release SHA-1 fingerprint in Firebase Console.');
+        }
+        throw new Error(mapFirebaseAuthError(error));
+      }
+    } else {
+      
+      const uid = 'usr_apple_' + Math.random().toString(36).substring(2, 10);
+      const user: UserInfo = {
+        uid,
+        email: 'apple.user@icloud.com',
+        displayName: 'Alex Mercer (Apple)',
+        photoURL: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=150',
+        createdAt: new Date().toISOString(),
+        emailVerified: true,
+      };
+
+      return {
+        user,
+        token: 'token_' + uid,
+      };
+    }
   }
 
-  /**
-   * Sign Out
-   */
   async logout(): Promise<void> {
-    await delay(400);
+    try {
+      const auth = getAuth();
+      await signOut(auth);
+      try {
+        await GoogleSignin.signOut();
+      } catch {
+        
+      }
+    } catch (error: any) {
+      console.warn('[AuthService] Sign out error:', error);
+    }
+  }
+
+  getCurrentUser(): UserInfo | null {
+    const auth = getAuth();
+    const currentUser = auth.currentUser;
+    return currentUser ? formatFirebaseUser(currentUser) : null;
   }
 }
 

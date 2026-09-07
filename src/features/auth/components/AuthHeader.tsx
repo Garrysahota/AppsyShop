@@ -1,8 +1,3 @@
-/**
- * AuthHeader — AppsyShop
- * High-impact brand header for auth screens.
- */
-
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';

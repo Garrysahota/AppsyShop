@@ -1,7 +1,3 @@
-/**
- * Notification Types — AppsyShop
- */
-
 export type NotificationCategory = 'all' | 'drops' | 'orders' | 'promos';
 
 export interface NotificationItem {

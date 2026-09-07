@@ -1,9 +1,3 @@
-/**
- * ProductDetailScreen — AppsyShop
- * Flagship sneaker deep dive with interactive size/color selectors, authenticity guarantee,
- * and sticky "Add to Bag / Cop Now" checkout bar.
- */
-
 import React, { useState } from 'react';
 import {
   Dimensions,
@@ -36,10 +30,15 @@ import {
 import { colors, spacing, typography } from '@theme';
 import useAppDispatch from '@shared/hooks/useAppDispatch';
 import useAppSelector from '@shared/hooks/useAppSelector';
+import { ProductDetailSkeleton } from '@shared/components/SkeletonLoader';
 import { toggleFavorite } from '../store/productsSlice';
 import { addToCart, updateQuantity } from '@features/cart/store/cartSlice';
 import type { MainTabParamList } from '@app/navigation/types';
+import { formatINR } from '@shared/utils/currency';
+import { createMMKV } from 'react-native-mmkv';
+import { SIZE_PREF_KEY } from '@features/profile/components/SizePreferenceModal';
 
+const prefStorage = createMMKV({ id: 'appsyshop-preferences' });
 const { width } = Dimensions.get('window');
 
 type ProductDetailRouteProp = RouteProp<MainTabParamList, 'ProductDetail'>;
@@ -56,13 +55,23 @@ export const ProductDetailScreen: React.FC = () => {
   const cartItems = useAppSelector(state => state.cart.items);
 
   const product = products.find(p => p.id === productId) || products[0];
-  const isFavorite = favorites.includes(product.id);
 
-  // User selections
-  const [selectedSize, setSelectedSize] = useState<number>(product.sizes[0] || 9);
-  const [selectedColor, setSelectedColor] = useState<string>(product.colors[0] || '#000000');
+  const savedPrefSize = prefStorage.getNumber(SIZE_PREF_KEY);
+  const initialSize =
+    savedPrefSize && product?.sizes?.includes(savedPrefSize)
+      ? savedPrefSize
+      : product?.sizes?.[0] || 8.5;
+
+  const [selectedSize, setSelectedSize] = useState<number>(initialSize);
+  const [selectedColor, setSelectedColor] = useState<string>(product?.colors?.[0] || '#000000');
   const [quantity, setQuantity] = useState<number>(1);
   const [addedSuccess, setAddedSuccess] = useState<boolean>(false);
+
+  if (!product) {
+    return <ProductDetailSkeleton />;
+  }
+
+  const isFavorite = favorites.includes(product.id);
 
   const cartItem = cartItems.find(
     i => i.product.id === product.id && i.selectedSize === selectedSize,
@@ -103,7 +112,7 @@ export const ProductDetailScreen: React.FC = () => {
         style={StyleSheet.absoluteFill}
       />
 
-      {/* ─── Top Header Bar ─────────────────────────────────────────────── */}
+      {}
       <View
         style={[
           styles.topBar,
@@ -134,7 +143,7 @@ export const ProductDetailScreen: React.FC = () => {
         </View>
       </View>
 
-      {/* ─── Scrollable Sneaker Content ──────────────────────────────────── */}
+      {}
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[
@@ -142,7 +151,7 @@ export const ProductDetailScreen: React.FC = () => {
           { paddingBottom: insets.bottom + 110 },
         ]}>
         
-        {/* Hero Sneaker Image Showcase */}
+        {}
         <View style={styles.imageShowcase}>
           <Image
             source={{ uri: product.imageUrl }}
@@ -150,7 +159,7 @@ export const ProductDetailScreen: React.FC = () => {
             resizeMode="cover"
           />
 
-          {/* Badges Overlay */}
+          {}
           <View style={styles.imageBadges}>
             {product.isHotDrop && (
               <LinearGradient
@@ -172,14 +181,14 @@ export const ProductDetailScreen: React.FC = () => {
             )}
           </View>
 
-          {/* 360 preview hint */}
+          {}
           <View style={styles.view360Pill}>
             <RotateCw size={13} color={colors.accent} />
             <Text style={styles.view360Text}>360° SNEAKER VIEW</Text>
           </View>
         </View>
 
-        {/* Sneaker Title & Rating */}
+        {}
         <View style={styles.titleSection}>
           <View style={styles.brandRow}>
             <Text style={styles.brandSubtitle}>{product.brand.toUpperCase()} EXCLUSIVE</Text>
@@ -192,11 +201,13 @@ export const ProductDetailScreen: React.FC = () => {
 
           <Text style={styles.sneakerName}>{product.name}</Text>
 
-          {/* Price Header */}
+          {}
           <View style={styles.priceRow}>
-            <Text style={styles.currentPrice}>${product.price}</Text>
+            <Text style={styles.currentPrice}>{formatINR(product.price)}</Text>
             {Boolean(product.originalPrice) && (
-              <Text style={styles.originalPrice}>${product.originalPrice}</Text>
+              <Text style={styles.originalPrice}>
+                {formatINR(product.originalPrice!)}
+              </Text>
             )}
             {product.stockLeft !== undefined && product.stockLeft <= 5 && (
               <View style={styles.stockUrgency}>
@@ -208,7 +219,7 @@ export const ProductDetailScreen: React.FC = () => {
           </View>
         </View>
 
-        {/* ─── 10-Minute Drop Delivery Guarantee ───────────────────────────── */}
+        {}
         <View style={styles.guaranteeCard}>
           <View style={styles.guaranteeItem}>
             <View style={[styles.guaranteeIconBox, { backgroundColor: 'rgba(163, 230, 53, 0.15)' }]}>
@@ -217,7 +228,7 @@ export const ProductDetailScreen: React.FC = () => {
             <View style={styles.guaranteeTextContainer}>
               <Text style={styles.guaranteeTitle}>10-Minute Flash Drop</Text>
               <Text style={styles.guaranteeSubtitle}>
-                In stock at Manhattan warehouse. Dispatches instantly upon checkout.
+                In stock at local Indian hub. Dispatches instantly upon checkout.
               </Text>
             </View>
           </View>
@@ -237,11 +248,11 @@ export const ProductDetailScreen: React.FC = () => {
           </View>
         </View>
 
-        {/* ─── Size Selector ──────────────────────────────────────────────── */}
+        {}
         <View style={styles.optionSection}>
           <View style={styles.sectionHeaderRow}>
-            <Text style={styles.optionTitle}>SELECT SIZE (US MEN'S)</Text>
-            <Text style={styles.sizeGuideLink}>Size Guide</Text>
+            <Text style={styles.optionTitle}>SELECT SIZE (UK / INDIA STANDARD)</Text>
+            <Text style={styles.sizeGuideLink}>Size Guide (UK/US)</Text>
           </View>
 
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.sizesScroll}>
@@ -258,7 +269,7 @@ export const ProductDetailScreen: React.FC = () => {
                       styles.sizeOptionText,
                       isSelected && styles.sizeOptionTextActive,
                     ]}>
-                    {size}
+                    UK {size}
                   </Text>
                 </TouchableOpacity>
               );
@@ -266,7 +277,7 @@ export const ProductDetailScreen: React.FC = () => {
           </ScrollView>
         </View>
 
-        {/* ─── Color Swatches ─────────────────────────────────────────────── */}
+        {}
         <View style={styles.optionSection}>
           <Text style={styles.optionTitle}>COLORWAY</Text>
           <View style={styles.colorsRow}>
@@ -288,7 +299,7 @@ export const ProductDetailScreen: React.FC = () => {
           </View>
         </View>
 
-        {/* ─── Description & Sneaker Story ─────────────────────────────────── */}
+        {}
         <View style={styles.storySection}>
           <Text style={styles.optionTitle}>SNEAKER STORY & SPECS</Text>
           <Text style={styles.storyParagraph}>{product.description}</Text>
@@ -314,7 +325,7 @@ export const ProductDetailScreen: React.FC = () => {
         </View>
       </ScrollView>
 
-      {/* ─── Sticky Bottom Action Bar ─────────────────────────────────────── */}
+      {}
       <View
         style={[
           styles.stickyBottomBar,
@@ -326,7 +337,7 @@ export const ProductDetailScreen: React.FC = () => {
         </View>
 
         {inBagQuantity > 0 ? (
-          /* When in bag: Stepper + View Bag */
+          
           <View style={styles.bottomActionsGroup}>
             <View style={styles.bottomStepper}>
               <TouchableOpacity
@@ -361,7 +372,7 @@ export const ProductDetailScreen: React.FC = () => {
             </TouchableOpacity>
           </View>
         ) : (
-          /* When not in bag: 1-Tap Add to Bag */
+          
           <TouchableOpacity
             style={styles.addToBagButton}
             activeOpacity={0.85}
@@ -379,7 +390,7 @@ export const ProductDetailScreen: React.FC = () => {
               ) : (
                 <View style={styles.ctaContent}>
                   <Zap size={18} color={colors.textOnDark} />
-                  <Text style={styles.addToBagText}>Cop Now (${product.price})</Text>
+                  <Text style={styles.addToBagText}>Cop Now ({formatINR(product.price)})</Text>
                 </View>
               )}
             </LinearGradient>

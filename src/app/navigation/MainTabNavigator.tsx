@@ -1,8 +1,3 @@
-/**
- * MainTabNavigator — AppsyShop
- * Bottom tab navigator routing Home, Search, Cart, Orders, and Profile.
- */
-
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import HomeScreen from '@features/products/screens/HomeScreen';

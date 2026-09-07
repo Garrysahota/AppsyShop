@@ -1,7 +1,3 @@
-/**
- * Product Types — AppsyShop
- */
-
 export type ProductCategory =
   | 'All'
   | 'Drops'
@@ -58,8 +54,10 @@ export interface ProductsState {
   items: Product[];
   selectedCategory: ProductCategory;
   searchQuery: string;
-  favorites: string[]; // Product IDs
+  favorites: string[]; 
   filters: ProductFilters;
+  location: string;
+  isLocationLoading: boolean;
   isLoading: boolean;
   error: string | null;
 }

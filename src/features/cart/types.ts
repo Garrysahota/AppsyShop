@@ -1,7 +1,3 @@
-/**
- * Cart Types — AppsyShop
- */
-
 import { Product } from '@features/products/types';
 
 export interface CartItem {

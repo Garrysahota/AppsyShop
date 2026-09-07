@@ -1,0 +1,55 @@
+{
+  "project_info": {
+    "project_number": "83401155353",
+    "project_id": "appsyshop",
+    "storage_bucket": "appsyshop.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:83401155353:android:a4cdc2f5cb1764b59ddb88",
+        "android_client_info": {
+          "package_name": "com.appsyshop"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "83401155353-f11ppt4d1l2ovcmb1nqdifo13js5ft6a.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.appsyshop",
+            "certificate_hash": "5e8f16062ea3cd2c4a0d547876baa6f38cabf625"
+          }
+        },
+        {
+          "client_id": "83401155353-lhn2bpvqanm8svkcvnj19l6mupm1rd21.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.appsyshop",
+            "certificate_hash": "c597e036ed8a8cfd0eb511e763b677f415be6531"
+          }
+        },
+        {
+          "client_id": "83401155353-puea2d6tld9qjirn6mb9kf69081pbbme.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCmg8y25I958sGFmzjjeKQBJ2imTx7V8f0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "83401155353-puea2d6tld9qjirn6mb9kf69081pbbme.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

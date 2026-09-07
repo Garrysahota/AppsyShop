@@ -1,48 +1,51 @@
-/**
- * Checkout Slice — AppsyShop
- * Manages delivery addresses, payment methods, and order placement.
- */
-
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { CheckoutState, DeliveryAddress, PaymentMethod, PlacedOrder } from '../types';
+
+export const RAZORPAY_PAYMENT_METHOD: PaymentMethod = {
+  id: 'pay-razorpay',
+  type: 'razorpay',
+  title: 'Razorpay (UPI / Cards / Netbanking)',
+  isDefault: true,
+};
 
 const INITIAL_ADDRESSES: DeliveryAddress[] = [
   {
     id: 'addr-1',
-    title: 'Home (Manhattan)',
+    title: 'Home (Bandra West)',
     recipientName: 'Alex Mercer',
-    street: '350 5th Ave',
-    apartment: 'Apt 14B',
-    city: 'New York',
-    state: 'NY',
-    zipCode: '10118',
-    phone: '+1 (555) 234-5678',
-    deliveryNotes: 'Call upon arrival, leave with 24/7 doorman',
+    street: 'Flat 402, Sea Breeze Apts, Hill Road',
+    apartment: 'Bandra West',
+    city: 'Mumbai',
+    state: 'Maharashtra',
+    zipCode: '400050',
+    phone: '+91 98765 43210',
+    deliveryNotes: 'Leave with 24/7 security guard at gate',
     isDefault: true,
     isFlashDropEligible: true,
   },
   {
     id: 'addr-2',
-    title: 'Work / Studio',
+    title: 'Work / Studio (Indiranagar)',
     recipientName: 'Alex Mercer',
-    street: '55 Water St',
-    apartment: 'Floor 8',
-    city: 'Brooklyn',
-    state: 'NY',
-    zipCode: '11201',
-    phone: '+1 (555) 234-5678',
-    deliveryNotes: 'Front desk reception drop',
+    street: '100ft Road, 4th Cross',
+    apartment: 'Indiranagar',
+    city: 'Bengaluru',
+    state: 'Karnataka',
+    zipCode: '560038',
+    phone: '+91 98765 43210',
+    deliveryNotes: 'Reception floor 3 drop',
     isDefault: false,
     isFlashDropEligible: true,
   },
 ];
 
 const INITIAL_PAYMENTS: PaymentMethod[] = [
+  RAZORPAY_PAYMENT_METHOD,
   {
     id: 'pay-1',
     type: 'apple_pay',
     title: 'Apple Pay',
-    isDefault: true,
+    isDefault: false,
   },
   {
     id: 'pay-2',
@@ -68,7 +71,7 @@ const initialState: CheckoutState = {
   addresses: INITIAL_ADDRESSES,
   selectedAddressId: 'addr-1',
   paymentMethods: INITIAL_PAYMENTS,
-  selectedPaymentId: 'pay-1',
+  selectedPaymentId: 'pay-razorpay',
   isPlacingOrder: false,
   lastPlacedOrder: null,
 };
@@ -77,6 +80,16 @@ const checkoutSlice = createSlice({
   name: 'checkout',
   initialState,
   reducers: {
+    ensureRazorpayMethod: state => {
+      const exists = state.paymentMethods?.some(
+        p => p.type === 'razorpay' || p.id === 'pay-razorpay',
+      );
+      if (!exists) {
+        state.paymentMethods = [RAZORPAY_PAYMENT_METHOD, ...(state.paymentMethods || [])];
+        state.selectedPaymentId = 'pay-razorpay';
+      }
+    },
+
     addAddress: (state, action: PayloadAction<Omit<DeliveryAddress, 'id'>>) => {
       const newId = `addr-${Date.now()}`;
       const newAddress: DeliveryAddress = {
@@ -130,9 +143,35 @@ const checkoutSlice = createSlice({
       state.lastPlacedOrder = action.payload;
     },
   },
+  extraReducers: builder => {
+    builder.addCase('persist/REHYDRATE', (state, action: any) => {
+      const persisted = action?.payload?.checkout;
+      if (persisted) {
+        const methods = persisted.paymentMethods || [];
+        const hasRazorpay = methods.some(
+          (p: PaymentMethod) => p.type === 'razorpay' || p.id === 'pay-razorpay',
+        );
+
+        if (!hasRazorpay) {
+          state.paymentMethods = [RAZORPAY_PAYMENT_METHOD, ...methods];
+          state.selectedPaymentId = 'pay-razorpay';
+        } else {
+          state.paymentMethods = methods;
+          state.selectedPaymentId = persisted.selectedPaymentId || 'pay-razorpay';
+        }
+
+        state.addresses =
+          persisted.addresses?.length > 0 ? persisted.addresses : INITIAL_ADDRESSES;
+        state.selectedAddressId = persisted.selectedAddressId || 'addr-1';
+        state.isPlacingOrder = false;
+        state.lastPlacedOrder = persisted.lastPlacedOrder || null;
+      }
+    });
+  },
 });
 
 export const {
+  ensureRazorpayMethod,
   addAddress,
   selectAddress,
   deleteAddress,

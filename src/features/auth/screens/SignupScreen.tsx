@@ -13,11 +13,11 @@ import LinearGradient from 'react-native-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { AlertCircle, Check, Lock, Mail, User, UserPlus } from 'lucide-react-native';
+import { AlertCircle, Check, Lock, Mail, User } from 'lucide-react-native';
 import { colors, spacing, typography } from '@theme';
 import useAppDispatch from '@shared/hooks/useAppDispatch';
 import useAppSelector from '@shared/hooks/useAppSelector';
-import { clearAuthError, loginSocialUser, registerUser } from '../store/authSlice';
+import { clearAuthError, loginSocialUser, registerUser, resetAuthLoading } from '../store/authSlice';
 import AuthHeader from '../components/AuthHeader';
 import AuthInput from '../components/AuthInput';
 import SocialAuthButtons from '../components/SocialAuthButtons';
@@ -44,7 +44,11 @@ export const SignupScreen: React.FC = () => {
     terms?: string;
   }>({});
 
-  // Password strength calculation
+  React.useEffect(() => {
+    dispatch(clearAuthError());
+    dispatch(resetAuthLoading());
+  }, [dispatch]);
+
   const getPasswordStrength = (): { label: string; score: number; color: string } => {
     if (!password) return { label: '', score: 0, color: 'transparent' };
     let score = 0;
@@ -177,7 +181,7 @@ export const SignupScreen: React.FC = () => {
               error={formErrors.password}
             />
 
-            {/* Password strength meter */}
+            {}
             {password.length > 0 && (
               <View style={styles.strengthContainer}>
                 <View style={styles.strengthBars}>
@@ -221,7 +225,7 @@ export const SignupScreen: React.FC = () => {
               error={formErrors.confirmPassword}
             />
 
-            {/* Terms checkbox */}
+            {}
             <TouchableOpacity
               style={styles.termsRow}
               activeOpacity={0.7}
@@ -255,10 +259,7 @@ export const SignupScreen: React.FC = () => {
                 {isLoading ? (
                   <ActivityIndicator color={colors.textOnDark} />
                 ) : (
-                  <View style={styles.submitButtonContent}>
-                    <Text style={styles.submitButtonText}>Create Account</Text>
-                    <UserPlus size={18} color={colors.textOnDark} style={styles.submitButtonIcon} />
-                  </View>
+                  <Text style={styles.submitButtonText}>Create Account</Text>
                 )}
               </LinearGradient>
             </TouchableOpacity>

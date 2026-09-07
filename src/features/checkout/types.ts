@@ -1,10 +1,6 @@
-/**
- * Checkout Types — AppsyShop
- */
-
 export interface DeliveryAddress {
   id: string;
-  title: string; // e.g. "Home", "Office", "Studio"
+  title: string; 
   recipientName: string;
   street: string;
   apartment?: string;
@@ -14,10 +10,10 @@ export interface DeliveryAddress {
   phone: string;
   deliveryNotes?: string;
   isDefault: boolean;
-  isFlashDropEligible: boolean; // 10-min drop zone
+  isFlashDropEligible: boolean; 
 }
 
-export type PaymentMethodType = 'apple_pay' | 'google_pay' | 'card' | 'cash';
+export type PaymentMethodType = 'razorpay' | 'apple_pay' | 'google_pay' | 'card' | 'cash';
 
 export interface PaymentMethod {
   id: string;
@@ -29,6 +25,13 @@ export interface PaymentMethod {
   isDefault: boolean;
 }
 
+export interface RazorpayPaymentSuccess {
+  razorpay_payment_id: string;
+  razorpay_order_id: string;
+  razorpay_signature: string;
+  method: 'upi' | 'card' | 'netbanking' | 'wallet';
+}
+
 export interface PlacedOrder {
   orderId: string;
   placedAt: string;
@@ -38,6 +41,8 @@ export interface PlacedOrder {
   totalAmount: number;
   estimatedMinutes: number;
   status: 'confirmed' | 'packed' | 'in_transit' | 'delivered';
+  razorpayPaymentId?: string;
+  razorpayOrderId?: string;
 }
 
 export interface CheckoutState {

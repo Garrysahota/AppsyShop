@@ -15,16 +15,20 @@ import { toggleFavorite } from '../store/productsSlice';
 import { addToCart, updateQuantity } from '@features/cart/store/cartSlice';
 import { Product } from '../types';
 
+import { formatINR } from '@shared/utils/currency';
+
 interface ProductCardProps {
   product: Product;
   onPress?: () => void;
   cardWidth?: number;
+  variant?: 'standard' | 'flash';
 }
 
 export const ProductCard: React.FC<ProductCardProps> = ({
   product,
   onPress,
   cardWidth,
+  variant = 'standard',
 }) => {
   const dispatch = useAppDispatch();
   const isFavorite = useAppSelector(state =>
@@ -78,16 +82,20 @@ export const ProductCard: React.FC<ProductCardProps> = ({
     <TouchableOpacity
       activeOpacity={0.88}
       onPress={onPress}
-      style={[styles.container, cardWidth ? { width: cardWidth } : styles.defaultWidth]}>
-      {/* Image Container */}
-      <View style={styles.imageContainer}>
+      style={[
+        styles.container,
+        variant === 'flash' && styles.flashContainer,
+        cardWidth ? { width: cardWidth } : styles.defaultWidth,
+      ]}>
+      {}
+      <View style={[styles.imageContainer, variant === 'flash' && styles.flashImageContainer]}>
         <Image
           source={{ uri: product.imageUrl }}
           style={styles.image}
           resizeMode="cover"
         />
 
-        {/* Top Badges */}
+        {}
         <View style={styles.topBadgesRow}>
           {product.isHotDrop ? (
             <LinearGradient
@@ -106,7 +114,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             <View />
           )}
 
-          {/* Favorite Heart Button */}
+          {}
           <TouchableOpacity
             style={styles.favoriteButton}
             activeOpacity={0.7}
@@ -120,7 +128,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           </TouchableOpacity>
         </View>
 
-        {/* Stock urgency alert if low */}
+        {}
         {product.stockLeft !== undefined && product.stockLeft <= 5 && (
           <View style={styles.stockAlert}>
             <Text style={styles.stockAlertText}>Only {product.stockLeft} left</Text>
@@ -128,8 +136,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         )}
       </View>
 
-      {/* Details */}
-      <View style={styles.detailsContainer}>
+      {}
+      <View style={[styles.detailsContainer, variant === 'flash' && styles.flashDetailsContainer]}>
         <View style={styles.brandRow}>
           <Text style={styles.brandText}>{product.brand.toUpperCase()}</Text>
           <View style={styles.ratingRow}>
@@ -142,12 +150,14 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           {product.name}
         </Text>
 
-        {/* Price & Add to Bag / Stepper */}
+        {}
         <View style={styles.bottomRow}>
           <View style={styles.priceColumn}>
-            <Text style={styles.priceText}>${product.price}</Text>
+            <Text style={styles.priceText}>{formatINR(product.price)}</Text>
             {Boolean(product.originalPrice) && (
-              <Text style={styles.originalPriceText}>${product.originalPrice}</Text>
+              <Text style={styles.originalPriceText}>
+                {formatINR(product.originalPrice!)}
+              </Text>
             )}
           </View>
 
@@ -187,12 +197,17 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    backgroundColor: '#18122B',
     borderRadius: spacing.cardRadius - 2,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.1)',
     overflow: 'hidden',
     marginBottom: spacing.md,
+  },
+  flashContainer: {
+    backgroundColor: '#1E1736',
+    borderColor: 'rgba(236, 72, 153, 0.35)',
+    borderWidth: 1.5,
   },
   defaultWidth: {
     flex: 1,
@@ -200,8 +215,12 @@ const styles = StyleSheet.create({
   imageContainer: {
     width: '100%',
     height: 155,
-    backgroundColor: '#151022',
+    backgroundColor: '#120D20',
     position: 'relative',
+  },
+  flashImageContainer: {
+    height: 170,
+    backgroundColor: '#120D20',
   },
   image: {
     width: '100%',
@@ -264,6 +283,10 @@ const styles = StyleSheet.create({
   },
   detailsContainer: {
     padding: spacing.sm + 2,
+    backgroundColor: '#18122B',
+  },
+  flashDetailsContainer: {
+    backgroundColor: '#1E1736',
   },
   brandRow: {
     flexDirection: 'row',

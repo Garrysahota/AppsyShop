@@ -1,8 +1,3 @@
-/**
- * Notifications Slice — AppsyShop
- * Manages notification alerts, unread states, filtering, and deep-link actions.
- */
-
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { NotificationCategory, NotificationItem, NotificationsState } from '../types';
 

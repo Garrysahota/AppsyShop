@@ -1,8 +1,3 @@
-/**
- * Auth Types — AppsyShop
- * Type definitions for authentication state, user profile, credentials, and actions.
- */
-
 export interface UserInfo {
   uid: string;
   email: string;

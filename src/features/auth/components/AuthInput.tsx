@@ -1,8 +1,3 @@
-/**
- * AuthInput — AppsyShop
- * Custom text input with focus highlight, secure toggle, and validation error support.
- */
-
 import React, { useState } from 'react';
 import {
   StyleSheet,

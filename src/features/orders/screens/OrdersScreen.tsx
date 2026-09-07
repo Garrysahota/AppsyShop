@@ -1,8 +1,3 @@
-/**
- * OrdersScreen — AppsyShop
- * Live drop tracking with multi-step delivery status and order history.
- */
-
 import React from 'react';
 import {
   Image,
@@ -47,10 +42,10 @@ export const OrdersScreen: React.FC = () => {
           },
         ]}>
         
-        {/* Title */}
+        {}
         <Text style={styles.title}>Drop Tracking 🚀</Text>
 
-        {/* Live Active Order Card */}
+        {}
         <View style={styles.liveOrderCard}>
           <View style={styles.liveHeader}>
             <View style={styles.liveBadge}>
@@ -76,9 +71,9 @@ export const OrdersScreen: React.FC = () => {
             </View>
           </View>
 
-          {/* Stepper Timeline */}
+          {}
           <View style={styles.timelineContainer}>
-            {/* Step 1: Confirmed */}
+            {}
             <View style={styles.timelineStep}>
               <View style={[styles.stepIconContainer, styles.stepIconActive]}>
                 <CheckCircle2 size={16} color="#000" />
@@ -90,7 +85,7 @@ export const OrdersScreen: React.FC = () => {
             </View>
             <View style={[styles.timelineLine, styles.timelineLineActive]} />
 
-            {/* Step 2: Packed */}
+            {}
             <View style={styles.timelineStep}>
               <View style={[styles.stepIconContainer, styles.stepIconActive]}>
                 <Package size={16} color="#000" />
@@ -102,7 +97,7 @@ export const OrdersScreen: React.FC = () => {
             </View>
             <View style={[styles.timelineLine, styles.timelineLineActive]} />
 
-            {/* Step 3: Out for Delivery */}
+            {}
             <View style={styles.timelineStep}>
               <View style={[styles.stepIconContainer, styles.stepIconCurrent]}>
                 <Truck size={16} color={colors.textOnDark} />
@@ -114,7 +109,7 @@ export const OrdersScreen: React.FC = () => {
             </View>
             <View style={styles.timelineLine} />
 
-            {/* Step 4: Delivered */}
+            {}
             <View style={styles.timelineStep}>
               <View style={styles.stepIconContainer}>
                 <MapPin size={16} color="rgba(255, 255, 255, 0.4)" />
@@ -126,7 +121,7 @@ export const OrdersScreen: React.FC = () => {
             </View>
           </View>
 
-          {/* Rider Card */}
+          {}
           <View style={styles.riderCard}>
             <View style={styles.riderAvatar}>
               <Text style={styles.riderEmoji}>⚡</Text>
@@ -141,10 +136,10 @@ export const OrdersScreen: React.FC = () => {
           </View>
         </View>
 
-        {/* Past Drops Header */}
+        {}
         <Text style={styles.sectionTitle}>Past Delivered Drops</Text>
 
-        {/* Past Order Card */}
+        {}
         <View style={styles.pastOrderCard}>
           <Image
             source={{

@@ -1,9 +1,3 @@
-/**
- * Typography tokens — AppsyShop
- * Bold, large, tight-tracking headings (weight 700–800)
- * Quick-commerce style: heavy type, minimal copy
- */
-
 export const fontWeight = {
   regular: '400' as const,
   medium: '500' as const,

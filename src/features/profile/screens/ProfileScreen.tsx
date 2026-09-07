@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Image,
   ScrollView,
@@ -15,6 +15,7 @@ import {
   ChevronRight,
   CreditCard,
   Crown,
+  Globe,
   Heart,
   LogOut,
   MapPin,
@@ -22,17 +23,59 @@ import {
   Shield,
   Zap,
 } from 'lucide-react-native';
+import { createMMKV } from 'react-native-mmkv';
 import { colors, spacing, typography } from '@theme';
 import useAppDispatch from '@shared/hooks/useAppDispatch';
 import useAppSelector from '@shared/hooks/useAppSelector';
 import { logoutUser } from '@features/auth/store/authSlice';
+import AddressModal from '@features/checkout/components/AddressModal';
+import PaymentModal from '@features/checkout/components/PaymentModal';
+import SizePreferenceModal, {
+  GENDER_PREF_KEY,
+  SIZE_PREF_KEY,
+  SizePreference,
+} from '../components/SizePreferenceModal';
+import CurrencyPreferenceModal from '../components/CurrencyPreferenceModal';
+
+const storage = createMMKV({ id: 'appsyshop-preferences' });
 
 export const ProfileScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
   const dispatch = useAppDispatch();
+
   const user = useAppSelector(state => state.auth.user);
   const favoritesCount = useAppSelector(state => state.products.favorites.length);
+  const { addresses, selectedAddressId, paymentMethods, selectedPaymentId } =
+    useAppSelector(state => state.checkout);
+  const { currency, currencySymbol } = useAppSelector(state => state.preferences);
+
+  const [addressModalVisible, setAddressModalVisible] = useState(false);
+  const [paymentModalVisible, setPaymentModalVisible] = useState(false);
+  const [sizeModalVisible, setSizeModalVisible] = useState(false);
+  const [currencyModalVisible, setCurrencyModalVisible] = useState(false);
+
+  const [userUkSize, setUserUkSize] = useState<number>(8.5);
+  const [userGender, setUserGender] = useState<string>('Men');
+
+  useEffect(() => {
+    const savedUk = storage.getNumber(SIZE_PREF_KEY);
+    const savedGender = storage.getString(GENDER_PREF_KEY);
+    if (savedUk) setUserUkSize(savedUk);
+    if (savedGender) setUserGender(savedGender);
+  }, []);
+
+  const defaultAddress =
+    addresses.find(a => a.id === selectedAddressId) || addresses[0];
+  const defaultPayment =
+    paymentMethods.find(p => p.id === selectedPaymentId) ||
+    paymentMethods.find(p => p.type === 'razorpay') ||
+    paymentMethods[0];
+
+  const handleSaveSizePref = (pref: SizePreference) => {
+    setUserUkSize(pref.ukSize);
+    setUserGender(pref.gender);
+  };
 
   return (
     <View style={styles.container}>
@@ -50,11 +93,11 @@ export const ProfileScreen: React.FC = () => {
             paddingBottom: insets.bottom + 90,
           },
         ]}>
-        
-        {/* Title */}
-        <Text style={styles.title}>Account 👤</Text>
 
-        {/* User Card */}
+        { }
+        <Text style={styles.title}>Account</Text>
+
+        { }
         <LinearGradient
           colors={['#7C3AED', '#4C1D95']}
           start={{ x: 0, y: 0 }}
@@ -80,7 +123,7 @@ export const ProfileScreen: React.FC = () => {
             </View>
           </View>
 
-          {/* Quick Stats Bar */}
+          { }
           <View style={styles.statsBar}>
             <View style={styles.statItem}>
               <Text style={styles.statValue}>14</Text>
@@ -96,16 +139,19 @@ export const ProfileScreen: React.FC = () => {
             </TouchableOpacity>
             <View style={styles.statDivider} />
             <View style={styles.statItem}>
-              <Text style={styles.statValue}>$180</Text>
-              <Text style={styles.statLabel}>REWARDS</Text>
+              <Text style={styles.statValue}>
+                {currency === 'INR' ? '₹15,000' : '$180'}
+              </Text>
+              <Text style={styles.statLabel}>DROP REWARDS</Text>
             </View>
           </View>
         </LinearGradient>
 
-        {/* Settings List */}
+        { }
         <Text style={styles.sectionHeader}>Preferences & Delivery</Text>
 
         <View style={styles.menuGroup}>
+          { }
           <TouchableOpacity
             style={styles.menuItem}
             activeOpacity={0.75}
@@ -122,39 +168,77 @@ export const ProfileScreen: React.FC = () => {
 
           <View style={styles.menuDivider} />
 
-          <TouchableOpacity style={styles.menuItem} activeOpacity={0.75}>
+          { }
+          <TouchableOpacity
+            style={styles.menuItem}
+            activeOpacity={0.75}
+            onPress={() => setAddressModalVisible(true)}>
             <View style={[styles.menuIconBox, { backgroundColor: 'rgba(124, 58, 237, 0.2)' }]}>
               <MapPin size={18} color={colors.primaryGradientStart} />
             </View>
             <View style={styles.menuItemContent}>
-              <Text style={styles.menuItemTitle}>Saved Addresses</Text>
-              <Text style={styles.menuItemSubtitle}>Manhattan, NY (Default · 10 min drop)</Text>
+              <Text style={styles.menuItemTitle}>Saved Addresses ({addresses.length})</Text>
+              <Text style={styles.menuItemSubtitle} numberOfLines={1}>
+                {defaultAddress
+                  ? `${defaultAddress.title} · ${defaultAddress.city}, ${defaultAddress.state}`
+                  : 'Manage delivery addresses'}
+              </Text>
             </View>
             <ChevronRight size={18} color="rgba(255, 255, 255, 0.3)" />
           </TouchableOpacity>
 
           <View style={styles.menuDivider} />
 
-          <TouchableOpacity style={styles.menuItem} activeOpacity={0.75}>
+          { }
+          <TouchableOpacity
+            style={styles.menuItem}
+            activeOpacity={0.75}
+            onPress={() => setPaymentModalVisible(true)}>
             <View style={[styles.menuIconBox, { backgroundColor: 'rgba(236, 72, 153, 0.2)' }]}>
               <CreditCard size={18} color={colors.primaryGradientEnd} />
             </View>
             <View style={styles.menuItemContent}>
-              <Text style={styles.menuItemTitle}>Payment Methods</Text>
-              <Text style={styles.menuItemSubtitle}>Apple Pay · Visa ending 4092</Text>
+              <Text style={styles.menuItemTitle}>Payment Methods ({paymentMethods.length})</Text>
+              <Text style={styles.menuItemSubtitle} numberOfLines={1}>
+                {defaultPayment ? defaultPayment.title : 'Razorpay (UPI / Cards)'}
+              </Text>
             </View>
             <ChevronRight size={18} color="rgba(255, 255, 255, 0.3)" />
           </TouchableOpacity>
 
           <View style={styles.menuDivider} />
 
-          <TouchableOpacity style={styles.menuItem} activeOpacity={0.75}>
+          { }
+          <TouchableOpacity
+            style={styles.menuItem}
+            activeOpacity={0.75}
+            onPress={() => setSizeModalVisible(true)}>
             <View style={[styles.menuIconBox, { backgroundColor: 'rgba(163, 230, 53, 0.2)' }]}>
               <Ruler size={18} color={colors.accent} />
             </View>
             <View style={styles.menuItemContent}>
               <Text style={styles.menuItemTitle}>Sneaker Size Preference</Text>
-              <Text style={styles.menuItemSubtitle}>US 9.5 (Men's)</Text>
+              <Text style={styles.menuItemSubtitle}>
+                UK {userUkSize} ({userGender}'s · India / UK Standard)
+              </Text>
+            </View>
+            <ChevronRight size={18} color="rgba(255, 255, 255, 0.3)" />
+          </TouchableOpacity>
+
+          <View style={styles.menuDivider} />
+
+          <TouchableOpacity
+            style={styles.menuItem}
+            activeOpacity={0.75}
+            onPress={() => setCurrencyModalVisible(true)}>
+            <View style={[styles.menuIconBox, { backgroundColor: 'rgba(59, 130, 246, 0.2)' }]}>
+              <Globe size={18} color="#60A5FA" />
+            </View>
+            <View style={styles.menuItemContent}>
+              <Text style={styles.menuItemTitle}>Shopping Currency</Text>
+              <Text style={styles.menuItemSubtitle}>
+                {currency} ({currencySymbol})
+              </Text>
             </View>
             <ChevronRight size={18} color="rgba(255, 255, 255, 0.3)" />
           </TouchableOpacity>
@@ -200,6 +284,31 @@ export const ProfileScreen: React.FC = () => {
           <Text style={styles.signOutText}>Sign Out of AppsyShop</Text>
         </TouchableOpacity>
       </ScrollView>
+
+      {/* Address Modal */}
+      <AddressModal
+        visible={addressModalVisible}
+        onClose={() => setAddressModalVisible(false)}
+      />
+
+      {/* Payment Modal */}
+      <PaymentModal
+        visible={paymentModalVisible}
+        onClose={() => setPaymentModalVisible(false)}
+      />
+
+      {/* Size Preference Modal */}
+      <SizePreferenceModal
+        visible={sizeModalVisible}
+        onClose={() => setSizeModalVisible(false)}
+        onSave={handleSaveSizePref}
+      />
+
+      {/* Currency Preference Modal */}
+      <CurrencyPreferenceModal
+        visible={currencyModalVisible}
+        onClose={() => setCurrencyModalVisible(false)}
+      />
     </View>
   );
 };

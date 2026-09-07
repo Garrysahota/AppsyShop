@@ -1,8 +1,3 @@
-/**
- * AuthNavigator — AppsyShop
- * Handles the pre-auth flow: Splash → Onboarding → Login → Signup → ForgotPassword
- */
-
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import SplashScreen from '@features/splash/screens/SplashScreen';

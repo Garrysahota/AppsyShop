@@ -1,8 +1,3 @@
-/**
- * Auth Slice — AppsyShop
- * Redux Toolkit slice for managing authentication, user session, and auth tokens.
- */
-
 import { createAsyncThunk, createSlice, PayloadAction } from '@reduxjs/toolkit';
 import authService from '../services/authService';
 import { AuthResponse, AuthState, LoginCredentials, RegisterCredentials, UserInfo } from '../types';
@@ -17,9 +12,6 @@ const initialState: AuthState = {
   resetEmailSent: false,
 };
 
-/**
- * Async Thunk: Sign In with Email and Password
- */
 export const loginUser = createAsyncThunk<
   AuthResponse,
   LoginCredentials,
@@ -33,9 +25,6 @@ export const loginUser = createAsyncThunk<
   }
 });
 
-/**
- * Async Thunk: Register with Full Name, Email and Password
- */
 export const registerUser = createAsyncThunk<
   AuthResponse,
   RegisterCredentials,
@@ -49,9 +38,6 @@ export const registerUser = createAsyncThunk<
   }
 });
 
-/**
- * Async Thunk: Social Login (Google / Apple)
- */
 export const loginSocialUser = createAsyncThunk<
   AuthResponse,
   'google' | 'apple',
@@ -65,9 +51,6 @@ export const loginSocialUser = createAsyncThunk<
   }
 });
 
-/**
- * Async Thunk: Send Password Reset Email
- */
 export const sendPasswordReset = createAsyncThunk<
   { success: boolean; message: string },
   string,
@@ -81,9 +64,6 @@ export const sendPasswordReset = createAsyncThunk<
   }
 });
 
-/**
- * Async Thunk: Logout
- */
 export const logoutUser = createAsyncThunk('auth/logoutUser', async () => {
   await authService.logout();
 });
@@ -94,6 +74,9 @@ const authSlice = createSlice({
   reducers: {
     clearAuthError: state => {
       state.error = null;
+    },
+    resetAuthLoading: state => {
+      state.isLoading = false;
     },
     resetPasswordResetStatus: state => {
       state.resetEmailSent = false;
@@ -106,11 +89,23 @@ const authSlice = createSlice({
       state.token = action.payload.token;
       state.refreshToken = action.payload.refreshToken || null;
       state.isAuthenticated = true;
+      state.isLoading = false;
       state.error = null;
     },
   },
   extraReducers: builder => {
-    // ─── Login ──────────────────────────────────────────────
+    
+    builder.addCase('persist/REHYDRATE', (state, action: any) => {
+      if (action.payload?.auth) {
+        state.user = action.payload.auth.user || null;
+        state.token = action.payload.auth.token || null;
+        state.refreshToken = action.payload.auth.refreshToken || null;
+        state.isAuthenticated = Boolean(action.payload.auth.user && action.payload.auth.token);
+      }
+      state.isLoading = false;
+      state.error = null;
+    });
+    
     builder
       .addCase(loginUser.pending, state => {
         state.isLoading = true;
@@ -130,7 +125,6 @@ const authSlice = createSlice({
         state.isAuthenticated = false;
       });
 
-    // ─── Register ───────────────────────────────────────────
     builder
       .addCase(registerUser.pending, state => {
         state.isLoading = true;
@@ -150,7 +144,6 @@ const authSlice = createSlice({
         state.isAuthenticated = false;
       });
 
-    // ─── Social Login ───────────────────────────────────────
     builder
       .addCase(loginSocialUser.pending, state => {
         state.isLoading = true;
@@ -169,7 +162,6 @@ const authSlice = createSlice({
         state.error = action.payload || 'Social sign-in failed.';
       });
 
-    // ─── Password Reset ─────────────────────────────────────
     builder
       .addCase(sendPasswordReset.pending, state => {
         state.isLoading = true;
@@ -187,7 +179,6 @@ const authSlice = createSlice({
         state.error = action.payload || 'Failed to send password reset email.';
       });
 
-    // ─── Logout ─────────────────────────────────────────────
     builder.addCase(logoutUser.fulfilled, state => {
       state.user = null;
       state.token = null;
@@ -200,5 +191,6 @@ const authSlice = createSlice({
   },
 });
 
-export const { clearAuthError, resetPasswordResetStatus, setCredentials } = authSlice.actions;
+export const { clearAuthError, resetAuthLoading, resetPasswordResetStatus, setCredentials } =
+  authSlice.actions;
 export default authSlice.reducer;

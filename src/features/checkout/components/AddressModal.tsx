@@ -1,10 +1,6 @@
-/**
- * AddressModal — AppsyShop
- * Bottom sheet modal to select a saved delivery address or add a new address.
- */
-
 import React, { useState } from 'react';
 import {
+  ActivityIndicator,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -21,8 +17,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   Check,
   CheckCircle2,
+  Crosshair,
   Home,
   MapPin,
+  Navigation,
   Plus,
   Trash2,
   X,
@@ -31,6 +29,7 @@ import {
 import { colors, spacing, typography } from '@theme';
 import useAppDispatch from '@shared/hooks/useAppDispatch';
 import useAppSelector from '@shared/hooks/useAppSelector';
+import locationService from '@shared/services/locationService';
 import {
   addAddress,
   deleteAddress,
@@ -50,12 +49,14 @@ export const AddressModal: React.FC<AddressModalProps> = ({
   const insets = useSafeAreaInsets();
   const dispatch = useAppDispatch();
   const { addresses, selectedAddressId } = useAppSelector(state => state.checkout);
+  const currentUser = useAppSelector(state => state.auth.user);
 
   const [isAddingNew, setIsAddingNew] = useState(false);
+  const [isFetchingLocation, setIsFetchingLocation] = useState(false);
+  const [locationSuccessMsg, setLocationSuccessMsg] = useState<string | null>(null);
 
-  // Form State
   const [title, setTitle] = useState('');
-  const [name, setName] = useState('');
+  const [name, setName] = useState(currentUser?.displayName || '');
   const [street, setStreet] = useState('');
   const [apartment, setApartment] = useState('');
   const [city, setCity] = useState('New York');
@@ -63,6 +64,57 @@ export const AddressModal: React.FC<AddressModalProps> = ({
   const [zipCode, setZipCode] = useState('10001');
   const [deliveryNotes, setDeliveryNotes] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
+
+  const handleUseCurrentLocation = async () => {
+    setIsFetchingLocation(true);
+    setFormError(null);
+    setLocationSuccessMsg(null);
+
+    try {
+      const detailed = await locationService.getDetailedAddress();
+
+      setTitle(detailed.title || '📍 Live Drop Location');
+      if (!name) {
+        setName(currentUser?.displayName || 'Sneakerhead');
+      }
+      setStreet(detailed.street || 'Current Location Street');
+      setCity(detailed.city || 'New York');
+      setState(detailed.state || 'NY');
+      setZipCode(detailed.zipCode || '10001');
+      setLocationSuccessMsg(`Detected: ${detailed.formattedLocation}`);
+    } catch (err: any) {
+      setFormError('Could not detect location. Please type your street address.');
+    } finally {
+      setIsFetchingLocation(false);
+    }
+  };
+
+  const handleQuickAddCurrentLocation = async () => {
+    setIsFetchingLocation(true);
+    try {
+      const detailed = await locationService.getDetailedAddress();
+      dispatch(
+        addAddress({
+          title: '📍 Current Location Drop',
+          recipientName: currentUser?.displayName || 'Sneakerhead',
+          street: detailed.street,
+          apartment: '',
+          city: detailed.city,
+          state: detailed.state,
+          zipCode: detailed.zipCode,
+          phone: '+1 (555) 000-0000',
+          deliveryNotes: 'Instant drop at current location',
+          isDefault: true,
+          isFlashDropEligible: true,
+        }),
+      );
+      onClose();
+    } catch {
+      setIsAddingNew(true);
+    } finally {
+      setIsFetchingLocation(false);
+    }
+  };
 
   const handleSaveNewAddress = () => {
     if (!street.trim() || !name.trim()) {
@@ -86,14 +138,14 @@ export const AddressModal: React.FC<AddressModalProps> = ({
       }),
     );
 
-    // Reset
     setIsAddingNew(false);
     setTitle('');
-    setName('');
+    setName(currentUser?.displayName || '');
     setStreet('');
     setApartment('');
     setDeliveryNotes('');
     setFormError(null);
+    setLocationSuccessMsg(null);
   };
 
   if (!visible) return null;
@@ -116,7 +168,7 @@ export const AddressModal: React.FC<AddressModalProps> = ({
             styles.sheetContainer,
             { paddingBottom: Math.max(insets.bottom, 16) + spacing.sm },
           ]}>
-          {/* Header */}
+          {}
           <View style={styles.header}>
             <View style={styles.headerTitleRow}>
               <MapPin size={18} color={colors.accent} />
@@ -129,6 +181,8 @@ export const AddressModal: React.FC<AddressModalProps> = ({
               onPress={() => {
                 if (isAddingNew) {
                   setIsAddingNew(false);
+                  setFormError(null);
+                  setLocationSuccessMsg(null);
                 } else {
                   onClose();
                 }
@@ -146,8 +200,38 @@ export const AddressModal: React.FC<AddressModalProps> = ({
             keyboardShouldPersistTaps="handled">
             
             {isAddingNew ? (
-              /* Add New Address Form */
+              
               <View style={styles.formContainer}>
+                {}
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  onPress={handleUseCurrentLocation}
+                  disabled={isFetchingLocation}
+                  style={styles.useCurrentLocationBtn}>
+                  {isFetchingLocation ? (
+                    <ActivityIndicator size="small" color={colors.accent} />
+                  ) : (
+                    <Crosshair size={18} color={colors.accent} />
+                  )}
+                  <View style={styles.useLocationTextContainer}>
+                    <Text style={styles.useLocationTitle}>
+                      {isFetchingLocation
+                        ? 'Acquiring GPS & Network Address...'
+                        : 'Use My Current Location'}
+                    </Text>
+                    <Text style={styles.useLocationSubtitle}>
+                      Auto-fills street, city, state & zip code
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+
+                {Boolean(locationSuccessMsg) && (
+                  <View style={styles.successBox}>
+                    <CheckCircle2 size={15} color={colors.accent} />
+                    <Text style={styles.successText}>{locationSuccessMsg}</Text>
+                  </View>
+                )}
+
                 {Boolean(formError) && (
                   <View style={styles.errorBox}>
                     <Text style={styles.errorText}>{formError}</Text>
@@ -205,6 +289,29 @@ export const AddressModal: React.FC<AddressModalProps> = ({
                   </View>
                 </View>
 
+                <View style={styles.rowInputs}>
+                  <View style={styles.halfInput}>
+                    <Text style={styles.inputLabel}>CITY</Text>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="New York"
+                      placeholderTextColor="rgba(255, 255, 255, 0.4)"
+                      value={city}
+                      onChangeText={setCity}
+                    />
+                  </View>
+                  <View style={styles.halfInput}>
+                    <Text style={styles.inputLabel}>STATE / REGION</Text>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="NY"
+                      placeholderTextColor="rgba(255, 255, 255, 0.4)"
+                      value={state}
+                      onChangeText={setState}
+                    />
+                  </View>
+                </View>
+
                 <Text style={styles.inputLabel}>DELIVERY INSTRUCTIONS (OPTIONAL)</Text>
                 <TextInput
                   style={[styles.input, styles.multilineInput]}
@@ -229,7 +336,7 @@ export const AddressModal: React.FC<AddressModalProps> = ({
                 </TouchableOpacity>
               </View>
             ) : (
-              /* Address List */
+              
               <View>
                 <View style={styles.deliveryBadge}>
                   <Zap size={14} color={colors.accent} />
@@ -237,6 +344,28 @@ export const AddressModal: React.FC<AddressModalProps> = ({
                     All saved locations qualify for 10-Minute Instant Drop
                   </Text>
                 </View>
+
+                {}
+                <TouchableOpacity
+                  style={styles.quickLocationButton}
+                  activeOpacity={0.8}
+                  disabled={isFetchingLocation}
+                  onPress={handleQuickAddCurrentLocation}>
+                  <View style={styles.quickLocationLeft}>
+                    <Crosshair size={18} color={colors.accent} />
+                    <View>
+                      <Text style={styles.quickLocationTitle}>
+                        Deliver to My Current Location
+                      </Text>
+                      <Text style={styles.quickLocationSubtitle}>
+                        Auto-detects GPS address & sets as drop point
+                      </Text>
+                    </View>
+                  </View>
+                  {isFetchingLocation && (
+                    <ActivityIndicator size="small" color={colors.accent} />
+                  )}
+                </TouchableOpacity>
 
                 {addresses.map(addr => {
                   const isSelected = selectedAddressId === addr.id;
@@ -278,11 +407,15 @@ export const AddressModal: React.FC<AddressModalProps> = ({
                   );
                 })}
 
-                {/* Add New Address Button */}
+                {}
                 <TouchableOpacity
                   style={styles.addNewButton}
                   activeOpacity={0.8}
-                  onPress={() => setIsAddingNew(true)}>
+                  onPress={() => {
+                    setIsAddingNew(true);
+                    setFormError(null);
+                    setLocationSuccessMsg(null);
+                  }}>
                   <Plus size={18} color={colors.accent} />
                   <Text style={styles.addNewText}>Add New Delivery Address</Text>
                 </TouchableOpacity>
@@ -314,7 +447,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 28,
     borderWidth: 1.5,
     borderColor: 'rgba(255, 255, 255, 0.15)',
-    maxHeight: '85%',
+    maxHeight: '88%',
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: -10 },
     shadowOpacity: 0.5,
@@ -368,6 +501,74 @@ const styles = StyleSheet.create({
     color: colors.accent,
     fontSize: 11,
     fontWeight: typography.fontWeight.bold,
+    flex: 1,
+  },
+  quickLocationButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: 'rgba(163, 230, 53, 0.1)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(163, 230, 53, 0.35)',
+    borderRadius: spacing.cardRadius - 4,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+  },
+  quickLocationLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flex: 1,
+  },
+  quickLocationTitle: {
+    color: colors.accent,
+    fontSize: typography.fontSize.sm,
+    fontWeight: typography.fontWeight.bold,
+  },
+  quickLocationSubtitle: {
+    color: colors.textOnDarkMuted,
+    fontSize: 11,
+    marginTop: 2,
+  },
+  useCurrentLocationBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: 'rgba(163, 230, 53, 0.12)',
+    borderWidth: 1.5,
+    borderColor: colors.accent,
+    borderRadius: spacing.cardRadius - 6,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+  },
+  useLocationTextContainer: {
+    flex: 1,
+  },
+  useLocationTitle: {
+    color: colors.accent,
+    fontSize: typography.fontSize.sm,
+    fontWeight: typography.fontWeight.bold,
+  },
+  useLocationSubtitle: {
+    color: colors.textOnDarkMuted,
+    fontSize: 11,
+    marginTop: 2,
+  },
+  successBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(163, 230, 53, 0.12)',
+    borderWidth: 1,
+    borderColor: colors.accent,
+    borderRadius: 8,
+    padding: 10,
+    marginBottom: spacing.md,
+  },
+  successText: {
+    color: colors.accent,
+    fontSize: typography.fontSize.xs,
+    fontWeight: typography.fontWeight.semiBold,
     flex: 1,
   },
   addressCard: {
@@ -458,52 +659,51 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(244, 63, 94, 0.15)',
     borderWidth: 1,
     borderColor: colors.error,
-    padding: spacing.sm,
     borderRadius: 8,
-    marginBottom: spacing.sm,
+    padding: 10,
+    marginBottom: spacing.md,
   },
   errorText: {
-    color: '#FECDD3',
+    color: '#FDA4AF',
     fontSize: typography.fontSize.xs,
-    fontWeight: typography.fontWeight.bold,
+    fontWeight: typography.fontWeight.semiBold,
   },
   inputLabel: {
-    fontSize: 9,
-    fontWeight: typography.fontWeight.extraBold,
     color: colors.textOnDarkMuted,
+    fontSize: 10,
+    fontWeight: typography.fontWeight.black,
     letterSpacing: typography.letterSpacing.wider,
-    marginBottom: 4,
+    marginBottom: 6,
     marginTop: spacing.sm,
   },
   input: {
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-    borderRadius: spacing.cardRadius - 6,
+    backgroundColor: 'rgba(255, 255, 255, 0.07)',
+    borderRadius: spacing.cardRadius - 8,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.12)',
-    paddingHorizontal: spacing.md,
-    height: 48,
     color: colors.textOnDark,
     fontSize: typography.fontSize.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 10,
   },
   rowInputs: {
     flexDirection: 'row',
-    gap: spacing.md,
+    gap: 12,
   },
   halfInput: {
     flex: 1,
   },
   multilineInput: {
     height: 70,
-    paddingTop: 10,
     textAlignVertical: 'top',
   },
   saveButtonContainer: {
-    borderRadius: spacing.cardRadius,
+    borderRadius: spacing.cardRadius - 4,
     overflow: 'hidden',
     marginTop: spacing.lg,
   },
   saveButton: {
-    height: 52,
+    height: 50,
     alignItems: 'center',
     justifyContent: 'center',
   },

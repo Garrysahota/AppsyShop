@@ -1,9 +1,3 @@
-/**
- * RootNavigator — AppsyShop
- * Top-level navigator. Checks onboarding state and routes to Auth or Main.
- * Re-renders when hasSeenOnboarding changes (e.g. after onboarding completes).
- */
-
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import AuthNavigator from './AuthNavigator';
@@ -15,11 +9,18 @@ import CheckoutScreen from '@features/checkout/screens/CheckoutScreen';
 import OrderSuccessScreen from '@features/checkout/screens/OrderSuccessScreen';
 import NotificationsScreen from '@features/notifications/screens/NotificationsScreen';
 import useAppSelector from '@shared/hooks/useAppSelector';
+import useAppDispatch from '@shared/hooks/useAppDispatch';
+import { initializeCurrencyPreference } from '@shared/store/preferencesSlice';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 const RootNavigator: React.FC = () => {
   const isAuthenticated = useAppSelector(state => state.auth.isAuthenticated);
+  const dispatch = useAppDispatch();
+
+  React.useEffect(() => {
+    dispatch(initializeCurrencyPreference());
+  }, [dispatch]);
 
   return (
     <Stack.Navigator screenOptions={{ headerShown: false, animation: 'fade' }}>

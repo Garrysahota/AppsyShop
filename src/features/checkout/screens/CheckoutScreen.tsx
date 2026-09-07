@@ -1,12 +1,7 @@
-/**
- * CheckoutScreen — AppsyShop
- * Multi-section order review with address/payment selectors, drop speed guarantee,
- * and 1-tap place order action.
- */
-
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Image,
   ScrollView,
   StyleSheet,
@@ -22,6 +17,7 @@ import {
   ChevronRight,
   CreditCard,
   Home,
+  Lock,
   MapPin,
   ShieldCheck,
   Smartphone,
@@ -33,29 +29,43 @@ import { colors, spacing, typography } from '@theme';
 import useAppDispatch from '@shared/hooks/useAppDispatch';
 import useAppSelector from '@shared/hooks/useAppSelector';
 import { clearCart } from '@features/cart/store/cartSlice';
-import { setLastPlacedOrder } from '../store/checkoutSlice';
+import { ensureRazorpayMethod, RAZORPAY_PAYMENT_METHOD, setLastPlacedOrder } from '../store/checkoutSlice';
 import AddressModal from '../components/AddressModal';
 import PaymentModal from '../components/PaymentModal';
+import RazorpayModal from '../components/RazorpayModal';
+import { RazorpayPaymentSuccess } from '../types';
+import { formatINR } from '@shared/utils/currency';
 
 export const CheckoutScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
   const dispatch = useAppDispatch();
 
+  const currentUser = useAppSelector(state => state.auth.user);
   const { items, discountPercentage } = useAppSelector(state => state.cart);
   const { addresses, selectedAddressId, paymentMethods, selectedPaymentId } =
     useAppSelector(state => state.checkout);
 
   const [addressModalVisible, setAddressModalVisible] = useState(false);
   const [paymentModalVisible, setPaymentModalVisible] = useState(false);
+  const [razorpayModalVisible, setRazorpayModalVisible] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  React.useEffect(() => {
+    dispatch(ensureRazorpayMethod());
+  }, [dispatch]);
+
+  const methodsList = paymentMethods.some(p => p.type === 'razorpay')
+    ? paymentMethods
+    : [RAZORPAY_PAYMENT_METHOD, ...paymentMethods];
 
   const selectedAddress =
     addresses.find(a => a.id === selectedAddressId) || addresses[0];
   const selectedPayment =
-    paymentMethods.find(p => p.id === selectedPaymentId) || paymentMethods[0];
+    methodsList.find(p => p.id === selectedPaymentId) ||
+    methodsList.find(p => p.type === 'razorpay') ||
+    methodsList[0];
 
-  // Pricing calculations
   const subtotal = items.reduce(
     (acc, item) => acc + item.product.price * item.quantity,
     0,
@@ -65,6 +75,31 @@ export const CheckoutScreen: React.FC = () => {
   const finalTotal = Math.max(0, subtotal - discountAmount);
 
   const handlePlaceOrder = () => {
+    if (!selectedAddress) {
+      setAddressModalVisible(true);
+      return;
+    }
+
+    if (selectedPayment?.type === 'razorpay') {
+      
+      setRazorpayModalVisible(true);
+    } else {
+      
+      completeOrderPlacement();
+    }
+  };
+
+  const handleRazorpaySuccess = (paymentData: RazorpayPaymentSuccess) => {
+    setRazorpayModalVisible(false);
+    completeOrderPlacement(paymentData.razorpay_payment_id, paymentData.razorpay_order_id);
+  };
+
+  const handleRazorpayFailure = (errorMsg: string) => {
+    setRazorpayModalVisible(false);
+    Alert.alert('Payment Not Completed', errorMsg);
+  };
+
+  const completeOrderPlacement = (razorpayPaymentId?: string, razorpayOrderId?: string) => {
     setIsSubmitting(true);
     setTimeout(() => {
       const orderId = `SNK-${Math.floor(1000 + Math.random() * 9000)}`;
@@ -80,6 +115,8 @@ export const CheckoutScreen: React.FC = () => {
             totalAmount: finalTotal,
             estimatedMinutes: 8,
             status: 'confirmed',
+            razorpayPaymentId,
+            razorpayOrderId,
           }),
         );
       }
@@ -90,8 +127,9 @@ export const CheckoutScreen: React.FC = () => {
         orderId,
         total: finalTotal,
         itemsCount: totalItemsCount,
+        razorpayPaymentId,
       });
-    }, 1200);
+    }, 800);
   };
 
   return (
@@ -101,7 +139,7 @@ export const CheckoutScreen: React.FC = () => {
         style={StyleSheet.absoluteFill}
       />
 
-      {/* Top Header Bar */}
+      {}
       <View
         style={[
           styles.topBar,
@@ -126,7 +164,7 @@ export const CheckoutScreen: React.FC = () => {
           { paddingBottom: insets.bottom + 110 },
         ]}>
         
-        {/* ─── 1. Delivery Address Card ───────────────────────────────────── */}
+        {}
         <View style={styles.sectionCard}>
           <View style={styles.sectionHeaderRow}>
             <View style={styles.sectionHeaderLeft}>
@@ -178,7 +216,7 @@ export const CheckoutScreen: React.FC = () => {
           )}
         </View>
 
-        {/* ─── 2. Payment Method Card ─────────────────────────────────────── */}
+        {}
         <View style={styles.sectionCard}>
           <View style={styles.sectionHeaderRow}>
             <View style={styles.sectionHeaderLeft}>
@@ -197,18 +235,36 @@ export const CheckoutScreen: React.FC = () => {
             <TouchableOpacity
               activeOpacity={0.8}
               onPress={() => setPaymentModalVisible(true)}
-              style={styles.paymentSummaryRow}>
-              <View style={styles.paymentIconBox}>
-                {selectedPayment.type === 'apple_pay' ? (
+              style={[
+                styles.paymentSummaryRow,
+                selectedPayment.type === 'razorpay' && styles.razorpaySummaryRow,
+              ]}>
+              <View
+                style={[
+                  styles.paymentIconBox,
+                  selectedPayment.type === 'razorpay' && styles.rzpIconBox,
+                ]}>
+                {selectedPayment.type === 'razorpay' ? (
+                  <Text style={styles.rzpLogoText}>R</Text>
+                ) : selectedPayment.type === 'apple_pay' ? (
                   <Smartphone size={18} color={colors.textOnDark} />
                 ) : (
                   <CreditCard size={18} color={colors.primaryGradientEnd} />
                 )}
               </View>
               <View style={styles.paymentInfo}>
-                <Text style={styles.paymentTitle}>{selectedPayment.title}</Text>
+                <View style={styles.paymentTitleRow}>
+                  <Text style={styles.paymentTitle}>{selectedPayment.title}</Text>
+                  {selectedPayment.type === 'razorpay' && (
+                    <View style={styles.demoPill}>
+                      <Text style={styles.demoPillText}>DEMO ⚡</Text>
+                    </View>
+                  )}
+                </View>
                 <Text style={styles.paymentSub}>
-                  {selectedPayment.type === 'apple_pay'
+                  {selectedPayment.type === 'razorpay'
+                    ? 'UPI (GPay/PhonePe), 3D Cards, Netbanking'
+                    : selectedPayment.type === 'apple_pay'
                     ? '1-Tap biometric authorization'
                     : `Expires ${selectedPayment.expiryDate || '12/28'}`}
                 </Text>
@@ -224,7 +280,7 @@ export const CheckoutScreen: React.FC = () => {
           )}
         </View>
 
-        {/* ─── 3. Items Summary Preview ────────────────────────────────────── */}
+        {}
         <View style={styles.sectionCard}>
           <View style={styles.sectionHeaderRow}>
             <View style={styles.sectionHeaderLeft}>
@@ -250,7 +306,7 @@ export const CheckoutScreen: React.FC = () => {
                     {item.product.name}
                   </Text>
                   <Text style={styles.itemPreviewMeta}>
-                    US {item.selectedSize} · Qty {item.quantity} · ${item.product.price * item.quantity}
+                    UK {item.selectedSize} · Qty {item.quantity} · {formatINR(item.product.price * item.quantity)}
                   </Text>
                 </View>
               </View>
@@ -258,86 +314,107 @@ export const CheckoutScreen: React.FC = () => {
           </ScrollView>
         </View>
 
-        {/* ─── 4. Delivery Speed & Guarantees ──────────────────────────────── */}
-        <View style={styles.guaranteeBox}>
-          <View style={styles.guaranteeItem}>
-            <Zap size={16} color={colors.accent} />
-            <Text style={styles.guaranteeText}>
-              <Text style={styles.boldText}>10-Minute Flash Courier:</Text> Direct from warehouse dispatch
-            </Text>
+        {}
+        <View style={styles.guaranteeCard}>
+          <View style={styles.guaranteeIconCircle}>
+            <Truck size={18} color={colors.accent} />
           </View>
-          <View style={styles.guaranteeItem}>
-            <ShieldCheck size={16} color={colors.success} />
-            <Text style={styles.guaranteeText}>
-              <Text style={styles.boldText}>NFC Authenticated:</Text> Double-verified deadstock sneakers
+          <View style={styles.guaranteeContent}>
+            <Text style={styles.guaranteeTitle}>Instant 10-Minute Drop</Text>
+            <Text style={styles.guaranteeSub}>
+              Packed with tamper-evident NFC authenticity tag & climate shield.
             </Text>
           </View>
         </View>
 
-        {/* ─── 5. Price Breakdown ─────────────────────────────────────────── */}
-        <View style={styles.summaryCard}>
-          <Text style={styles.summaryTitle}>Payment Breakdown</Text>
+        {}
+        <View style={styles.sectionCard}>
+          <Text style={[styles.sectionHeading, { marginBottom: spacing.sm + 2 }]}>
+            PRICE BREAKDOWN
+          </Text>
 
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Subtotal ({totalItemsCount} items)</Text>
-            <Text style={styles.summaryValue}>${subtotal}</Text>
+          <View style={styles.priceRow}>
+            <Text style={styles.priceLabel}>Bag Subtotal</Text>
+            <Text style={styles.priceValue}>{formatINR(subtotal)}</Text>
           </View>
 
           {discountAmount > 0 && (
-            <View style={styles.summaryRow}>
-              <Text style={styles.summaryDiscountLabel}>VIP Promo Discount</Text>
-              <Text style={styles.summaryDiscountValue}>-${discountAmount}</Text>
+            <View style={styles.priceRow}>
+              <Text style={[styles.priceLabel, { color: colors.accent }]}>
+                Drop Discount ({discountPercentage}%)
+              </Text>
+              <Text style={[styles.priceValue, { color: colors.accent }]}>
+                -{formatINR(discountAmount)}
+              </Text>
             </View>
           )}
 
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>10-Minute Flash Drop Delivery</Text>
-            <Text style={styles.summaryFreeValue}>FREE</Text>
+          <View style={styles.priceRow}>
+            <Text style={styles.priceLabel}>Instant Courier Delivery</Text>
+            <Text style={[styles.priceValue, { color: colors.accent }]}>FREE</Text>
           </View>
 
           <View style={styles.divider} />
 
-          <View style={styles.totalRow}>
-            <Text style={styles.totalLabel}>Total Due</Text>
-            <Text style={styles.totalValue}>${finalTotal}</Text>
+          <View style={styles.priceRowTotal}>
+            <Text style={styles.totalLabel}>Total Payable</Text>
+            <View style={{ alignItems: 'flex-end' }}>
+              <Text style={styles.totalValue}>{formatINR(finalTotal)}</Text>
+            </View>
           </View>
         </View>
       </ScrollView>
 
-      {/* ─── Sticky Place Order Footer ────────────────────────────────────── */}
+      {}
       <View
         style={[
-          styles.stickyFooter,
-          { paddingBottom: Math.max(insets.bottom, 14) + 6 },
+          styles.bottomBar,
+          { paddingBottom: Math.max(insets.bottom, 16) + spacing.xs },
         ]}>
-        <View style={styles.footerPriceColumn}>
-          <Text style={styles.footerPriceLabel}>TOTAL AMOUNT</Text>
-          <Text style={styles.footerPriceValue}>${finalTotal}</Text>
-        </View>
-
         <TouchableOpacity
-          style={styles.placeOrderButton}
-          activeOpacity={0.85}
-          disabled={isSubmitting || items.length === 0}
-          onPress={handlePlaceOrder}>
-          <LinearGradient
-            colors={[colors.primaryGradientStart, colors.primaryGradientEnd]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={styles.placeOrderGradient}>
-            {isSubmitting ? (
-              <ActivityIndicator color={colors.textOnDark} />
-            ) : (
-              <View style={styles.placeOrderContent}>
-                <Zap size={18} color={colors.textOnDark} />
-                <Text style={styles.placeOrderText}>Place 10-Min Drop ⚡</Text>
-              </View>
-            )}
-          </LinearGradient>
+          activeOpacity={0.88}
+          disabled={isSubmitting}
+          onPress={handlePlaceOrder}
+          style={styles.placeOrderButtonContainer}>
+          {selectedPayment?.type === 'razorpay' ? (
+            
+            <View style={styles.razorpayCtaButton}>
+              {isSubmitting ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <View style={styles.placeOrderContent}>
+                  <View style={styles.rzpCtaLogo}>
+                    <Text style={styles.rzpCtaLogoText}>R</Text>
+                  </View>
+                  <Text style={styles.placeOrderText}>
+                    Pay with Razorpay • {formatINR(finalTotal)} ⚡
+                  </Text>
+                </View>
+              )}
+            </View>
+          ) : (
+            
+            <LinearGradient
+              colors={[colors.primaryGradientStart, colors.primaryGradientEnd]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.placeOrderButton}>
+              {isSubmitting ? (
+                <ActivityIndicator size="small" color={colors.textOnDark} />
+              ) : (
+                <View style={styles.placeOrderContent}>
+                  <Zap size={18} color={colors.textOnDark} />
+                  <Text style={styles.placeOrderText}>
+                    Confirm & Place Drop • {formatINR(finalTotal)} ⚡
+                  </Text>
+                </View>
+              )}
+            </LinearGradient>
+          )}
         </TouchableOpacity>
       </View>
 
-      {/* Address & Payment Modals */}
+      {}
       <AddressModal
         visible={addressModalVisible}
         onClose={() => setAddressModalVisible(false)}
@@ -346,6 +423,17 @@ export const CheckoutScreen: React.FC = () => {
       <PaymentModal
         visible={paymentModalVisible}
         onClose={() => setPaymentModalVisible(false)}
+      />
+
+      {}
+      <RazorpayModal
+        visible={razorpayModalVisible}
+        amount={finalTotal}
+        customerEmail={currentUser?.email || 'alex.mercer@appsyshop.com'}
+        customerPhone={currentUser?.phoneNumber || '+91 98765 43210'}
+        onSuccess={handleRazorpaySuccess}
+        onFailure={handleRazorpayFailure}
+        onClose={() => setRazorpayModalVisible(false)}
       />
     </View>
   );
@@ -490,6 +578,11 @@ const styles = StyleSheet.create({
     padding: spacing.sm + 2,
     gap: spacing.md,
   },
+  razorpaySummaryRow: {
+    backgroundColor: 'rgba(11, 103, 212, 0.12)',
+    borderColor: 'rgba(11, 103, 212, 0.3)',
+    borderWidth: 1,
+  },
   paymentIconBox: {
     width: 36,
     height: 36,
@@ -498,8 +591,34 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  rzpIconBox: {
+    backgroundColor: '#0B67D4',
+  },
+  rzpLogoText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '900',
+  },
   paymentInfo: {
     flex: 1,
+  },
+  paymentTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  demoPill: {
+    backgroundColor: 'rgba(245, 158, 11, 0.2)',
+    borderWidth: 1,
+    borderColor: '#F59E0B',
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    borderRadius: 4,
+  },
+  demoPillText: {
+    color: '#FBBF24',
+    fontSize: 8,
+    fontWeight: '900',
   },
   paymentTitle: {
     color: colors.textOnDark,
@@ -519,161 +638,158 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: 'rgba(255, 255, 255, 0.04)',
     borderRadius: 10,
-    padding: 8,
+    padding: spacing.xs + 2,
     gap: spacing.sm,
-    minWidth: 200,
+    width: 220,
   },
   itemImage: {
-    width: 48,
-    height: 48,
+    width: 44,
+    height: 44,
     borderRadius: 8,
-    backgroundColor: '#1E1435',
+    backgroundColor: '#1E1736',
   },
   itemPreviewInfo: {
     flex: 1,
   },
   itemPreviewName: {
     color: colors.textOnDark,
-    fontSize: typography.fontSize.xs + 1,
+    fontSize: typography.fontSize.xs,
     fontWeight: typography.fontWeight.bold,
   },
   itemPreviewMeta: {
-    color: colors.accent,
+    color: colors.textOnDarkMuted,
     fontSize: 10,
     marginTop: 2,
   },
-  guaranteeBox: {
+  guaranteeCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: 'rgba(163, 230, 53, 0.08)',
     borderWidth: 1,
     borderColor: 'rgba(163, 230, 53, 0.25)',
     borderRadius: spacing.cardRadius - 4,
     padding: spacing.md,
     marginBottom: spacing.md,
-    gap: 8,
+    gap: spacing.md,
   },
-  guaranteeItem: {
-    flexDirection: 'row',
+  guaranteeIconCircle: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: 'rgba(163, 230, 53, 0.15)',
     alignItems: 'center',
-    gap: spacing.sm,
+    justifyContent: 'center',
   },
-  guaranteeText: {
-    color: colors.textOnDark,
-    fontSize: typography.fontSize.xs + 1,
+  guaranteeContent: {
     flex: 1,
   },
-  boldText: {
+  guaranteeTitle: {
+    color: colors.accent,
+    fontSize: typography.fontSize.sm,
     fontWeight: typography.fontWeight.bold,
   },
-  summaryCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
-    borderRadius: spacing.cardRadius - 4,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-    padding: spacing.md,
-    marginBottom: spacing.lg,
+  guaranteeSub: {
+    color: colors.textOnDarkMuted,
+    fontSize: 11,
+    marginTop: 1,
+    lineHeight: 15,
   },
-  summaryTitle: {
-    fontSize: typography.fontSize.base,
-    fontWeight: typography.fontWeight.black,
-    color: colors.textOnDark,
-    marginBottom: spacing.md,
-  },
-  summaryRow: {
+  priceRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 8,
+    alignItems: 'center',
+    marginBottom: spacing.xs + 2,
   },
-  summaryLabel: {
+  priceLabel: {
     color: colors.textOnDarkMuted,
-    fontSize: typography.fontSize.sm,
+    fontSize: typography.fontSize.xs + 1,
   },
-  summaryValue: {
+  priceValue: {
     color: colors.textOnDark,
-    fontSize: typography.fontSize.sm,
-    fontWeight: typography.fontWeight.bold,
-  },
-  summaryDiscountLabel: {
-    color: colors.accent,
-    fontSize: typography.fontSize.sm,
-  },
-  summaryDiscountValue: {
-    color: colors.accent,
-    fontSize: typography.fontSize.sm,
-    fontWeight: typography.fontWeight.bold,
-  },
-  summaryFreeValue: {
-    color: colors.accent,
-    fontSize: typography.fontSize.sm,
+    fontSize: typography.fontSize.xs + 1,
     fontWeight: typography.fontWeight.bold,
   },
   divider: {
     height: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    marginVertical: spacing.sm + 2,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    marginVertical: spacing.sm,
   },
-  totalRow: {
+  priceRowTotal: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'baseline',
+    alignItems: 'flex-start',
+    marginTop: spacing.xs,
   },
   totalLabel: {
     color: colors.textOnDark,
     fontSize: typography.fontSize.base,
-    fontWeight: typography.fontWeight.bold,
+    fontWeight: typography.fontWeight.black,
   },
   totalValue: {
     color: colors.textOnDark,
     fontSize: typography.fontSize.xl,
     fontWeight: typography.fontWeight.black,
   },
-  stickyFooter: {
+  inrEquivalent: {
+    color: '#94A3B8',
+    fontSize: 11,
+    fontWeight: '600',
+    marginTop: 1,
+  },
+  bottomBar: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: 'rgba(18, 14, 30, 0.95)',
-    borderTopWidth: 1.5,
-    borderTopColor: 'rgba(255, 255, 255, 0.12)',
+    backgroundColor: 'rgba(13, 8, 25, 0.95)',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.1)',
     paddingHorizontal: spacing.screenPadding,
-    paddingTop: spacing.md,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: spacing.md,
+    paddingTop: spacing.sm,
   },
-  footerPriceColumn: {
-    justifyContent: 'center',
-  },
-  footerPriceLabel: {
-    color: colors.textOnDarkMuted,
-    fontSize: 9,
-    fontWeight: typography.fontWeight.bold,
-    letterSpacing: 0.5,
-  },
-  footerPriceValue: {
-    color: colors.textOnDark,
-    fontSize: typography.fontSize.xl,
-    fontWeight: typography.fontWeight.black,
-  },
-  placeOrderButton: {
-    flex: 1,
+  placeOrderButtonContainer: {
     borderRadius: spacing.cardRadius - 2,
     overflow: 'hidden',
   },
-  placeOrderGradient: {
-    height: 52,
+  placeOrderButton: {
+    height: 54,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  razorpayCtaButton: {
+    height: 54,
+    backgroundColor: '#0B67D4',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#0B67D4',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
+    elevation: 4,
   },
   placeOrderContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.xs + 2,
+    gap: spacing.sm,
+  },
+  rzpCtaLogo: {
+    width: 24,
+    height: 24,
+    borderRadius: 4,
+    backgroundColor: '#0C2340',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  rzpCtaLogoText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '900',
   },
   placeOrderText: {
     color: colors.textOnDark,
     fontSize: typography.fontSize.base,
     fontWeight: typography.fontWeight.extraBold,
+    letterSpacing: 0.3,
   },
 });
 

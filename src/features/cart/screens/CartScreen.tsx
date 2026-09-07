@@ -1,8 +1,3 @@
-/**
- * CartScreen — AppsyShop
- * Bag management with quantity stepper, promo code discounts, and quick checkout.
- */
-
 import React, { useState } from 'react';
 import {
   Image,
@@ -36,6 +31,7 @@ import {
   removeCoupon,
   updateQuantity,
 } from '../store/cartSlice';
+import { formatINR } from '@shared/utils/currency';
 
 export const CartScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
@@ -84,7 +80,7 @@ export const CartScreen: React.FC = () => {
           },
         ]}>
         
-        {/* Header */}
+        {}
         <View style={styles.headerRow}>
           <Text style={styles.title}>Your Bag 🛍️</Text>
           {items.length > 0 && (
@@ -95,7 +91,7 @@ export const CartScreen: React.FC = () => {
         </View>
 
         {items.length === 0 ? (
-          /* Empty Bag State */
+          
           <View style={styles.emptyContainer}>
             <View style={styles.emptyIconCircle}>
               <ShoppingBag size={48} color={colors.primaryGradientEnd} />
@@ -162,10 +158,10 @@ export const CartScreen: React.FC = () => {
 
                   <View style={styles.metaRow}>
                     <View style={styles.sizePill}>
-                      <Text style={styles.sizePillText}>US {item.selectedSize}</Text>
+                      <Text style={styles.sizePillText}>UK {item.selectedSize}</Text>
                     </View>
                     <Text style={styles.itemPrice}>
-                      ${item.product.price * item.quantity}
+                      {formatINR(item.product.price * item.quantity)}
                     </Text>
                   </View>
 
@@ -252,13 +248,13 @@ export const CartScreen: React.FC = () => {
 
               <View style={styles.summaryRow}>
                 <Text style={styles.summaryLabel}>Subtotal</Text>
-                <Text style={styles.summaryValue}>${subtotal}</Text>
+                <Text style={styles.summaryValue}>{formatINR(subtotal)}</Text>
               </View>
 
               {discountAmount > 0 && (
                 <View style={styles.summaryRow}>
                   <Text style={styles.summaryDiscountLabel}>Discount ({discountPercentage}%)</Text>
-                  <Text style={styles.summaryDiscountValue}>-${discountAmount}</Text>
+                  <Text style={styles.summaryDiscountValue}>-{formatINR(discountAmount)}</Text>
                 </View>
               )}
 
@@ -271,7 +267,7 @@ export const CartScreen: React.FC = () => {
 
               <View style={styles.summaryTotalRow}>
                 <Text style={styles.totalLabel}>Total</Text>
-                <Text style={styles.totalValue}>${total}</Text>
+                <Text style={styles.totalValue}>{formatINR(total)}</Text>
               </View>
 
               <TouchableOpacity
@@ -283,7 +279,9 @@ export const CartScreen: React.FC = () => {
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 0 }}
                   style={styles.checkoutGradient}>
-                  <Text style={styles.checkoutText}>Proceed to Checkout (${total})</Text>
+                  <Text style={styles.checkoutText}>
+                    Proceed to Drop Checkout ({formatINR(total)})
+                  </Text>
                   <ArrowRight size={18} color={colors.textOnDark} />
                 </LinearGradient>
               </TouchableOpacity>

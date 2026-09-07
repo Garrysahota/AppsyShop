@@ -1,13 +1,10 @@
-/**
- * HomeScreen — AppsyShop
- * Flagship e-commerce storefront with live drop banner, category filters, and sneaker cards.
- */
-
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
+  ActivityIndicator,
   Dimensions,
   FlatList,
   Image,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -24,6 +21,7 @@ import {
   Flame,
   Heart,
   MapPin,
+  RefreshCw,
   Search,
   SlidersHorizontal,
   Sparkles,
@@ -32,7 +30,17 @@ import {
 import { colors, spacing, typography } from '@theme';
 import useAppDispatch from '@shared/hooks/useAppDispatch';
 import useAppSelector from '@shared/hooks/useAppSelector';
-import { setSelectedCategory } from '../store/productsSlice';
+import {
+  BannerSkeleton,
+  CategoryPillSkeleton,
+  ProductCardSkeleton,
+} from '@shared/components/SkeletonLoader';
+import notificationService from '@shared/services/notificationService';
+import {
+  fetchProducts,
+  fetchUserLocation,
+  setSelectedCategory,
+} from '../store/productsSlice';
 import ProductCard from '../components/ProductCard';
 import FilterBottomSheet from '../components/FilterBottomSheet';
 import { ProductCategory } from '../types';
@@ -55,17 +63,31 @@ export const HomeScreen: React.FC = () => {
   const dispatch = useAppDispatch();
 
   const user = useAppSelector(state => state.auth.user);
-  const { items, selectedCategory, filters, favorites } = useAppSelector(
-    state => state.products,
-  );
+  const { items, selectedCategory, filters, favorites, location, isLocationLoading, isLoading } =
+    useAppSelector(state => state.products);
 
   const unreadNotifCount = useAppSelector(
     state => state.notifications.items.filter(n => !n.isRead).length,
   );
 
   const [filterModalVisible, setFilterModalVisible] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
-  // Countdown timer simulation
+  useEffect(() => {
+    dispatch(fetchProducts());
+    dispatch(fetchUserLocation());
+    notificationService.requestPermission();
+  }, [dispatch]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await Promise.all([
+      dispatch(fetchProducts()).unwrap(),
+      dispatch(fetchUserLocation()).unwrap(),
+    ]).catch(() => { });
+    setRefreshing(false);
+  }, [dispatch]);
+
   const [timeLeft, setTimeLeft] = useState({ hours: 2, minutes: 45, seconds: 18 });
 
   useEffect(() => {
@@ -89,61 +111,62 @@ export const HomeScreen: React.FC = () => {
     filters.onlyInStock ||
     filters.sortBy !== 'featured';
 
-  const filteredProducts = items
-    .filter(item => {
-      // 1. Category
-      if (selectedCategory !== 'All' && item.category !== selectedCategory) {
-        return false;
-      }
-      // 2. Brand
-      if (
-        filters.selectedBrands.length > 0 &&
-        !filters.selectedBrands.includes(item.brand)
-      ) {
-        return false;
-      }
-      // 3. Price
-      if (filters.priceRange === 'under_150' && item.price >= 150) return false;
-      if (
-        filters.priceRange === '150_250' &&
-        (item.price < 150 || item.price > 250)
-      ) {
-        return false;
-      }
-      if (
-        filters.priceRange === '250_350' &&
-        (item.price < 250 || item.price > 350)
-      ) {
-        return false;
-      }
-      if (filters.priceRange === 'above_350' && item.price <= 350) return false;
+  const filteredProducts = React.useMemo(() => {
+    return items
+      .filter(item => {
+        if (selectedCategory !== 'All' && item.category !== selectedCategory) {
+          return false;
+        }
 
-      // 4. Sizes
-      if (
-        filters.selectedSizes.length > 0 &&
-        !filters.selectedSizes.some(s => item.sizes.includes(s))
-      ) {
-        return false;
-      }
+        if (
+          filters.selectedBrands.length > 0 &&
+          !filters.selectedBrands.includes(item.brand)
+        ) {
+          return false;
+        }
 
-      // 5. Badges
-      if (filters.onlyHotDrops && !item.isHotDrop) return false;
-      if (filters.onlyDiscounted && !item.discountPercentage) return false;
-      if (filters.onlyInStock && item.stockLeft !== undefined && item.stockLeft <= 0) {
-        return false;
-      }
+        if (filters.priceRange === 'under_150' && item.price >= 150) return false;
+        if (
+          filters.priceRange === '150_250' &&
+          (item.price < 150 || item.price > 250)
+        ) {
+          return false;
+        }
+        if (
+          filters.priceRange === '250_350' &&
+          (item.price < 250 || item.price > 350)
+        ) {
+          return false;
+        }
+        if (filters.priceRange === 'above_350' && item.price <= 350) return false;
 
-      return true;
-    })
-    .sort((a, b) => {
-      if (filters.sortBy === 'price_asc') return a.price - b.price;
-      if (filters.sortBy === 'price_desc') return b.price - a.price;
-      if (filters.sortBy === 'rating') return b.rating - a.rating;
-      if (filters.sortBy === 'newest') return (b.isHotDrop ? 1 : 0) - (a.isHotDrop ? 1 : 0);
-      return 0;
-    });
+        if (
+          filters.selectedSizes.length > 0 &&
+          !filters.selectedSizes.some(s => item.sizes.includes(s))
+        ) {
+          return false;
+        }
 
-  const flashDropProducts = items.filter(p => p.isHotDrop);
+        if (filters.onlyHotDrops && !item.isHotDrop) return false;
+        if (filters.onlyDiscounted && !item.discountPercentage) return false;
+        if (filters.onlyInStock && item.stockLeft !== undefined && item.stockLeft <= 0) {
+          return false;
+        }
+
+        return true;
+      })
+      .sort((a, b) => {
+        if (filters.sortBy === 'price_asc') return a.price - b.price;
+        if (filters.sortBy === 'price_desc') return b.price - a.price;
+        if (filters.sortBy === 'rating') return b.rating - a.rating;
+        if (filters.sortBy === 'newest') return (b.isHotDrop ? 1 : 0) - (a.isHotDrop ? 1 : 0);
+        return 0;
+      });
+  }, [items, selectedCategory, filters]);
+
+  const flashDropProducts = React.useMemo(() => {
+    return items.filter(p => p.isHotDrop);
+  }, [items]);
 
   const formatTimerNumber = (num: number) => (num < 10 ? `0${num}` : `${num}`);
 
@@ -156,30 +179,46 @@ export const HomeScreen: React.FC = () => {
 
       <ScrollView
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={colors.accent}
+            colors={[colors.primaryGradientStart, colors.accent]}
+          />
+        }
         contentContainerStyle={[
           styles.scrollContent,
           {
             paddingTop: Math.max(insets.top, 16) + spacing.xs,
-            paddingBottom: insets.bottom + 90, // Extra spacing for floating bottom bar
+            paddingBottom: insets.bottom + 90,
           },
         ]}>
-        
-        {/* ─── Top Header Bar ─────────────────────────────────────────────── */}
+
+        { }
         <View style={styles.headerRow}>
           <View style={styles.locationContainer}>
             <View style={styles.deliveryBadge}>
               <Zap size={11} color={colors.accent} />
-              <Text style={styles.deliveryBadgeText}>10 MIN DROP</Text>
+              <Text style={styles.deliveryBadgeText}>LIVE LOCATION</Text>
             </View>
-            <View style={styles.locationRow}>
+            <TouchableOpacity
+              style={styles.locationRow}
+              activeOpacity={0.7}
+              onPress={() => dispatch(fetchUserLocation())}>
               <MapPin size={14} color={colors.primaryGradientEnd} />
               <Text style={styles.locationText} numberOfLines={1}>
-                Manhattan, NY · 10001
+                {location || 'Detecting location...'}
               </Text>
-            </View>
+              {isLocationLoading ? (
+                <ActivityIndicator size="small" color={colors.accent} style={styles.locationSpinner} />
+              ) : (
+                <RefreshCw size={11} color={colors.textOnDarkMuted} style={styles.locationRefreshIcon} />
+              )}
+            </TouchableOpacity>
           </View>
 
-          {/* Right Icon Buttons (Wishlist Heart & Notification Bell) */}
+          { }
           <View style={styles.topRightIcons}>
             <TouchableOpacity
               style={styles.headerIconButton}
@@ -207,17 +246,17 @@ export const HomeScreen: React.FC = () => {
           </View>
         </View>
 
-        {/* ─── User Greeting ──────────────────────────────────────────────── */}
+        { }
         <View style={styles.greetingSection}>
           <Text style={styles.greetingText}>
-            Hey, {user?.displayName?.split(' ')[0] || 'Sneakerhead'} 👋
+            Hey, {user?.displayName?.split(' ')[0] || 'Sneakerhead'}
           </Text>
           <Text style={styles.subGreetingText}>
             Fresh drops just landed at your nearest warehouse
           </Text>
         </View>
 
-        {/* ─── Search & Filter Bar ────────────────────────────────────────── */}
+        { }
         <View style={styles.searchBarRow}>
           <TouchableOpacity
             style={styles.searchBar}
@@ -239,139 +278,178 @@ export const HomeScreen: React.FC = () => {
           </TouchableOpacity>
         </View>
 
-        {/* ─── Hero Drop Card ─────────────────────────────────────────────── */}
-        <LinearGradient
-          colors={['#7C3AED', '#DB2777', '#F43F5E']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.heroBanner}>
-          <View style={styles.heroContent}>
-            <View style={styles.heroTopRow}>
-              <View style={styles.heroBadge}>
-                <Sparkles size={11} color="#000" />
-                <Text style={styles.heroBadgeText}>EXCLUSIVE DROP</Text>
-              </View>
-              <View style={styles.timerContainer}>
-                <Clock size={12} color={colors.textOnDark} />
-                <Text style={styles.timerText}>
-                  {formatTimerNumber(timeLeft.hours)}:{formatTimerNumber(timeLeft.minutes)}:
-                  {formatTimerNumber(timeLeft.seconds)}
-                </Text>
+        { }
+        {isLoading && items.length === 0 ? (
+          <View style={styles.skeletonContainer}>
+            <BannerSkeleton />
+            <CategoryPillSkeleton />
+            <View style={styles.sectionHeader}>
+              <View style={styles.sectionTitleRow}>
+                <Flame size={18} color="#F43F5E" />
+                <Text style={styles.sectionTitle}>Flash Drops</Text>
               </View>
             </View>
+            <View style={styles.productsGrid}>
+              {[1, 2].map(idx => (
+                <View key={'skel-flash-' + idx} style={styles.gridColumn}>
+                  <ProductCardSkeleton />
+                </View>
+              ))}
+            </View>
 
-            <Text style={styles.heroTitle}>Travis Scott x AJ1</Text>
-            <Text style={styles.heroSubtitle}>Reverse Mocha • Limited Run</Text>
-
-            <View style={styles.heroFooter}>
-              <View>
-                <Text style={styles.heroPriceLabel}>VIP DROP PRICE</Text>
-                <Text style={styles.heroPrice}>$380</Text>
+            <View style={styles.sectionHeader}>
+              <View style={styles.sectionTitleRow}>
+                <Sparkles size={18} color={colors.accent} />
+                <Text style={styles.sectionTitle}>Trending Kicks</Text>
               </View>
-              <TouchableOpacity
-                style={styles.heroButton}
-                activeOpacity={0.85}
-                onPress={() =>
-                  navigation.navigate('ProductDetail', { productId: 'snk-1' })
-                }>
-                <Text style={styles.heroButtonText}>Cop Now ⚡</Text>
-              </TouchableOpacity>
+            </View>
+            <View style={styles.productsGrid}>
+              {[3, 4, 5, 6].map(idx => (
+                <View key={'skel-trend-' + idx} style={styles.gridColumn}>
+                  <ProductCardSkeleton />
+                </View>
+              ))}
             </View>
           </View>
-
-          <Image
-            source={{
-              uri: 'https://images.unsplash.com/photo-1552346154-21d32810aba3?auto=format&fit=crop&w=600&q=80',
-            }}
-            style={styles.heroImage}
-            resizeMode="cover"
-          />
-        </LinearGradient>
-
-        {/* ─── Category Filter Pills ───────────────────────────────────────── */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.categoryList}>
-          {CATEGORIES.map(category => {
-            const isSelected = selectedCategory === category;
-            return (
-              <TouchableOpacity
-                key={category}
-                activeOpacity={0.8}
-                onPress={() => dispatch(setSelectedCategory(category))}
-                style={styles.categoryPillContainer}>
-                {isSelected ? (
-                  <LinearGradient
-                    colors={[colors.primaryGradientStart, colors.primaryGradientEnd]}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
-                    style={[styles.categoryPill, styles.categoryPillActive]}>
-                    <Text style={styles.categoryTextActive}>{category}</Text>
-                  </LinearGradient>
-                ) : (
-                  <View style={styles.categoryPill}>
-                    <Text style={styles.categoryText}>{category}</Text>
+        ) : (
+          <>
+            { }
+            <LinearGradient
+              colors={['#7C3AED', '#DB2777', '#F43F5E']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.heroBanner}>
+              <View style={styles.heroContent}>
+                <View style={styles.heroTopRow}>
+                  <View style={styles.heroBadge}>
+                    <Sparkles size={11} color="#000" />
+                    <Text style={styles.heroBadgeText}>EXCLUSIVE DROP</Text>
                   </View>
-                )}
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
+                  <View style={styles.timerContainer}>
+                    <Clock size={12} color={colors.textOnDark} />
+                    <Text style={styles.timerText}>
+                      {formatTimerNumber(timeLeft.hours)}:{formatTimerNumber(timeLeft.minutes)}:
+                      {formatTimerNumber(timeLeft.seconds)}
+                    </Text>
+                  </View>
+                </View>
 
-        {/* ─── Flash Drops Carousel ────────────────────────────────────────── */}
-        <View style={styles.sectionHeader}>
-          <View style={styles.sectionTitleRow}>
-            <Flame size={18} color="#F43F5E" />
-            <Text style={styles.sectionTitle}>Flash Drops</Text>
-          </View>
-          <TouchableOpacity
-            activeOpacity={0.7}
-            onPress={() => dispatch(setSelectedCategory('Drops'))}>
-            <Text style={styles.seeAllText}>See All</Text>
-          </TouchableOpacity>
-        </View>
+                <Text style={styles.heroTitle}>Travis Scott x AJ1</Text>
+                <Text style={styles.heroSubtitle}>Reverse Mocha • Limited Run</Text>
 
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.flashDropsScroll}>
-          {flashDropProducts.map(product => (
-            <ProductCard
-              key={'flash-' + product.id}
-              product={product}
-              cardWidth={width * 0.44}
-              onPress={() =>
-                navigation.navigate('ProductDetail', { productId: product.id })
-              }
-            />
-          ))}
-        </ScrollView>
+                <View style={styles.heroFooter}>
+                  <View>
+                    <Text style={styles.heroPriceLabel}>VIP DROP PRICE</Text>
+                    <Text style={styles.heroPrice}>₹31,920</Text>
+                  </View>
+                  <TouchableOpacity
+                    style={styles.heroButton}
+                    activeOpacity={0.85}
+                    onPress={() =>
+                      navigation.navigate('ProductDetail', { productId: 'snk-1' })
+                    }>
+                    <Text style={styles.heroButtonText}>Cop Now ⚡</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </LinearGradient>
 
-        {/* ─── All Sneakers / Trending Grid ─────────────────────────────────── */}
-        <View style={styles.sectionHeader}>
-          <View style={styles.sectionTitleRow}>
-            <Sparkles size={18} color={colors.accent} />
-            <Text style={styles.sectionTitle}>Trending Now</Text>
-          </View>
-          <Text style={styles.resultsCount}>{filteredProducts.length} Kicks</Text>
-        </View>
+            { }
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.categoryList}>
+              {CATEGORIES.map(category => {
+                const isSelected = selectedCategory === category;
+                return (
+                  <TouchableOpacity
+                    key={category}
+                    activeOpacity={0.8}
+                    onPress={() => dispatch(setSelectedCategory(category))}
+                    style={styles.categoryPillContainer}>
+                    {isSelected ? (
+                      <LinearGradient
+                        colors={[colors.primaryGradientStart, colors.primaryGradientEnd]}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 0 }}
+                        style={[styles.categoryPill, styles.categoryPillActive]}>
+                        <Text style={styles.categoryTextActive}>{category}</Text>
+                      </LinearGradient>
+                    ) : (
+                      <View style={styles.categoryPill}>
+                        <Text style={styles.categoryText}>{category}</Text>
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
 
-        <View style={styles.productsGrid}>
-          {filteredProducts.map(product => (
-            <View key={product.id} style={styles.gridColumn}>
-              <ProductCard
-                product={product}
-                onPress={() =>
-                  navigation.navigate('ProductDetail', { productId: product.id })
-                }
-              />
+            { }
+            {flashDropProducts.length > 0 && (
+              <>
+                <View style={styles.sectionHeader}>
+                  <View style={styles.sectionTitleRow}>
+                    <Flame size={18} color="#F43F5E" />
+                    <Text style={styles.sectionTitle}>Flash Drops</Text>
+                    <View style={styles.swipeHintBadge}>
+                      <Text style={styles.swipeHintText}>SWIPE ➔</Text>
+                    </View>
+                  </View>
+                  <TouchableOpacity
+                    activeOpacity={0.7}
+                    onPress={() => dispatch(setSelectedCategory('Drops'))}>
+                    <Text style={styles.seeAllText}>See All</Text>
+                  </TouchableOpacity>
+                </View>
+
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  snapToInterval={width * 0.62 + 14}
+                  decelerationRate="fast"
+                  contentContainerStyle={styles.flashDropsScroll}>
+                  {flashDropProducts.map(product => (
+                    <ProductCard
+                      key={'flash-' + product.id}
+                      product={product}
+                      cardWidth={width * 0.62}
+                      variant="flash"
+                      onPress={() =>
+                        navigation.navigate('ProductDetail', { productId: product.id })
+                      }
+                    />
+                  ))}
+                </ScrollView>
+              </>
+            )}
+
+            { }
+            <View style={styles.sectionHeader}>
+              <View style={styles.sectionTitleRow}>
+                <Sparkles size={18} color={colors.accent} />
+                <Text style={styles.sectionTitle}>Trending Kicks</Text>
+              </View>
+              <Text style={styles.resultsCount}>{filteredProducts.length} Kicks</Text>
             </View>
-          ))}
-        </View>
+
+            <View style={styles.productsGrid}>
+              {filteredProducts.map(product => (
+                <View key={product.id} style={styles.gridColumn}>
+                  <ProductCard
+                    product={product}
+                    onPress={() =>
+                      navigation.navigate('ProductDetail', { productId: product.id })
+                    }
+                  />
+                </View>
+              ))}
+            </View>
+          </>
+        )}
       </ScrollView>
 
-      {/* ─── Filter Bottom Sheet Modal ────────────────────────────────────── */}
+      { }
       <FilterBottomSheet
         visible={filterModalVisible}
         onClose={() => setFilterModalVisible(false)}
@@ -416,11 +494,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
+    maxWidth: width * 0.62,
   },
   locationText: {
     color: colors.textOnDark,
     fontSize: typography.fontSize.sm,
     fontWeight: typography.fontWeight.bold,
+  },
+  locationSpinner: {
+    marginLeft: 4,
+  },
+  locationRefreshIcon: {
+    marginLeft: 2,
+    opacity: 0.6,
+  },
+  skeletonContainer: {
+    marginTop: spacing.sm,
   },
   topRightIcons: {
     flexDirection: 'row',
@@ -669,6 +758,21 @@ const styles = StyleSheet.create({
     fontSize: typography.fontSize.lg,
     fontWeight: typography.fontWeight.black,
     color: colors.textOnDark,
+    letterSpacing: typography.letterSpacing.wide,
+  },
+  swipeHintBadge: {
+    backgroundColor: 'rgba(244, 63, 94, 0.15)',
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(244, 63, 94, 0.3)',
+    marginLeft: 2,
+  },
+  swipeHintText: {
+    color: '#FDA4AF',
+    fontSize: 9,
+    fontWeight: typography.fontWeight.extraBold,
     letterSpacing: typography.letterSpacing.wide,
   },
   seeAllText: {

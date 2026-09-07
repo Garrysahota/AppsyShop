@@ -41,7 +41,6 @@ export const ForgotPasswordScreen: React.FC = () => {
     };
   }, [dispatch]);
 
-  // Countdown timer for resend
   useEffect(() => {
     if (cooldown <= 0) return;
     const timer = setInterval(() => {
@@ -101,7 +100,7 @@ export const ForgotPasswordScreen: React.FC = () => {
           )}
 
           {resetEmailSent ? (
-            /* Success State */
+            
             <View style={styles.successCard}>
               <View style={styles.successIconCircle}>
                 <MailCheck size={36} color={colors.accent} />
@@ -140,7 +139,7 @@ export const ForgotPasswordScreen: React.FC = () => {
               </TouchableOpacity>
             </View>
           ) : (
-            /* Form State */
+            
             <View style={styles.form}>
               <AuthInput
                 label="EMAIL ADDRESS"

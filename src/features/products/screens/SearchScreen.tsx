@@ -36,7 +36,7 @@ export const SearchScreen: React.FC = () => {
 
   const searchResults = items
     .filter(item => {
-      // 1. Text Query
+      
       if (query.trim()) {
         const q = query.toLowerCase();
         const matches =
@@ -46,7 +46,6 @@ export const SearchScreen: React.FC = () => {
         if (!matches) return false;
       }
 
-      // 2. Brand
       if (
         filters.selectedBrands.length > 0 &&
         !filters.selectedBrands.includes(item.brand)
@@ -54,7 +53,6 @@ export const SearchScreen: React.FC = () => {
         return false;
       }
 
-      // 3. Price
       if (filters.priceRange === 'under_150' && item.price >= 150) return false;
       if (
         filters.priceRange === '150_250' &&
@@ -70,7 +68,6 @@ export const SearchScreen: React.FC = () => {
       }
       if (filters.priceRange === 'above_350' && item.price <= 350) return false;
 
-      // 4. Sizes
       if (
         filters.selectedSizes.length > 0 &&
         !filters.selectedSizes.some(s => item.sizes.includes(s))
@@ -78,7 +75,6 @@ export const SearchScreen: React.FC = () => {
         return false;
       }
 
-      // 5. Badges
       if (filters.onlyHotDrops && !item.isHotDrop) return false;
       if (filters.onlyDiscounted && !item.discountPercentage) return false;
       if (filters.onlyInStock && item.stockLeft !== undefined && item.stockLeft <= 0) {
@@ -111,10 +107,10 @@ export const SearchScreen: React.FC = () => {
           },
         ]}>
         
-        {/* Title */}
+        {}
         <Text style={styles.title}>Search Kicks 🔍</Text>
 
-        {/* Search Input & Filter Button */}
+        {}
         <View style={styles.searchRow}>
           <View style={styles.searchBar}>
             <Search size={18} color="rgba(255, 255, 255, 0.45)" style={styles.searchIcon} />
@@ -147,7 +143,7 @@ export const SearchScreen: React.FC = () => {
           </TouchableOpacity>
         </View>
 
-        {/* Suggestions */}
+        {}
         <View style={styles.suggestionsSection}>
           <View style={styles.suggestionsHeader}>
             <Sparkles size={13} color={colors.accent} />
@@ -169,7 +165,7 @@ export const SearchScreen: React.FC = () => {
           </ScrollView>
         </View>
 
-        {/* Results */}
+        {}
         <View style={styles.resultsHeader}>
           <Text style={styles.resultsCount}>
             {query.trim()
@@ -194,7 +190,7 @@ export const SearchScreen: React.FC = () => {
         </ScrollView>
       </View>
 
-      {/* Filter Bottom Sheet */}
+      {}
       <FilterBottomSheet
         visible={filterModalVisible}
         onClose={() => setFilterModalVisible(false)}

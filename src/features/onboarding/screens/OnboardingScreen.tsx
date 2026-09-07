@@ -1,17 +1,3 @@
-/**
- * OnboardingScreen — AppsyShop
- * "Live Tracking" style — 3 slides: Discover · Track · Checkout
- *
- * Slide 2 features the hero "Live Tracking" animation:
- *   pulsing concentric rings, location pin, animated route line, LIVE badge.
- *
- * States handled:
- *   - Loading: N/A (static content)
- *   - Empty: N/A
- *   - Error: N/A
- *   - Happy path: 3-slide onboarding with animated transitions
- */
-
 import React, { useRef, useState, useCallback } from 'react';
 import {
   Animated,
@@ -34,7 +20,6 @@ import type { AuthStackParamList } from '@app/navigation/types';
 
 const { width, height } = Dimensions.get('window');
 
-// ─── Slide Config ────────────────────────────────────────────────────────────
 type SlideType = 'discover' | 'tracking' | 'checkout';
 
 interface Slide {
@@ -78,7 +63,6 @@ const SLIDES: Slide[] = [
   },
 ];
 
-// ─── Pulsing Ring (for Live Tracking slide) ───────────────────────────────────
 interface PulsingRingProps {
   size: number;
   delay: number;
@@ -128,7 +112,6 @@ const PulsingRing: React.FC<PulsingRingProps> = ({ size, delay, color }) => {
   );
 };
 
-// ─── Illustration: Discover ───────────────────────────────────────────────────
 const DiscoverIllustration: React.FC = () => {
   const floatAnim = useRef(new Animated.Value(0)).current;
 
@@ -145,24 +128,24 @@ const DiscoverIllustration: React.FC = () => {
 
   return (
     <View style={illustrationStyles.container}>
-      {/* Glow backdrop */}
+      {}
       <View style={illustrationStyles.glowCircle} />
 
-      {/* Glassmorphic card */}
+      {}
       <Animated.View
         style={[
           illustrationStyles.glasCard,
           { transform: [{ translateY: floatAnim }] },
         ]}>
-        {/* Shoe icon */}
+        {}
         <Text style={illustrationStyles.shoeEmoji}>👟</Text>
 
-        {/* Top badge */}
+        {}
         <View style={illustrationStyles.badgeChip}>
           <Text style={illustrationStyles.badgeChipText}>JUST DROPPED</Text>
         </View>
 
-        {/* Bottom info */}
+        {}
         <View style={illustrationStyles.cardInfo}>
           <View>
             <Text style={illustrationStyles.cardBrand}>Nike Air Max 2026</Text>
@@ -174,7 +157,7 @@ const DiscoverIllustration: React.FC = () => {
         </View>
       </Animated.View>
 
-      {/* Floating mini tags */}
+      {}
       <View style={[illustrationStyles.floatingTag, illustrationStyles.tagTopLeft]}>
         <Text style={illustrationStyles.floatingTagText}>Air Zoom ✦</Text>
       </View>
@@ -185,14 +168,13 @@ const DiscoverIllustration: React.FC = () => {
   );
 };
 
-// ─── Illustration: Live Tracking ──────────────────────────────────────────────
 const TrackingIllustration: React.FC = () => {
   const livePulse = useRef(new Animated.Value(1)).current;
   const routeProgress = useRef(new Animated.Value(0)).current;
   const packageBounce = useRef(new Animated.Value(0)).current;
 
   React.useEffect(() => {
-    // Live badge pulse
+    
     const livePulseLoop = Animated.loop(
       Animated.sequence([
         Animated.timing(livePulse, { toValue: 0.6, duration: 700, useNativeDriver: true }),
@@ -201,10 +183,8 @@ const TrackingIllustration: React.FC = () => {
     );
     livePulseLoop.start();
 
-    // Route line draw animation
     Animated.timing(routeProgress, { toValue: 1, duration: 1800, useNativeDriver: false }).start();
 
-    // Package bounce
     const bounceLoop = Animated.loop(
       Animated.sequence([
         Animated.timing(packageBounce, { toValue: -6, duration: 600, useNativeDriver: true }),
@@ -221,7 +201,7 @@ const TrackingIllustration: React.FC = () => {
 
   return (
     <View style={trackingStyles.container}>
-      {/* LIVE badge */}
+      {}
       <View style={trackingStyles.liveBadge}>
         <Animated.View
           style={[trackingStyles.liveDot, { opacity: livePulse }]}
@@ -229,14 +209,14 @@ const TrackingIllustration: React.FC = () => {
         <Text style={trackingStyles.liveText}>LIVE</Text>
       </View>
 
-      {/* Location Pin with pulsing rings */}
+      {}
       <View style={trackingStyles.pinArea}>
-        {/* Pulsing rings — 3 layers */}
+        {}
         <PulsingRing size={160} delay={0} color={colors.accent} />
         <PulsingRing size={110} delay={500} color={colors.primaryGradientEnd} />
         <PulsingRing size={64} delay={1000} color={colors.primary} />
 
-        {/* Pin */}
+        {}
         <View style={trackingStyles.pin}>
           <LinearGradient
             colors={[colors.primaryGradientStart, colors.primaryGradientEnd]}
@@ -247,7 +227,7 @@ const TrackingIllustration: React.FC = () => {
         </View>
       </View>
 
-      {/* Route dashes */}
+      {}
       <View style={trackingStyles.routeContainer}>
         {[...Array(6)].map((_, i) => (
           <Animated.View
@@ -266,7 +246,7 @@ const TrackingIllustration: React.FC = () => {
         ))}
       </View>
 
-      {/* Package at bottom */}
+      {}
       <Animated.View
         style={[
           trackingStyles.packageContainer,
@@ -280,7 +260,7 @@ const TrackingIllustration: React.FC = () => {
         </View>
       </Animated.View>
 
-      {/* Location labels */}
+      {}
       <View style={trackingStyles.labelRow}>
         <View style={trackingStyles.locationLabel}>
           <View style={[trackingStyles.labelDot, { backgroundColor: colors.accent }]} />
@@ -295,7 +275,6 @@ const TrackingIllustration: React.FC = () => {
   );
 };
 
-// ─── Illustration: Checkout ───────────────────────────────────────────────────
 const CheckoutIllustration: React.FC = () => {
   const cardAnim = useRef(new Animated.Value(0)).current;
   const checkAnim = useRef(new Animated.Value(0)).current;
@@ -309,7 +288,7 @@ const CheckoutIllustration: React.FC = () => {
 
   return (
     <View style={checkoutStyles.container}>
-      {/* Glassmorphic card */}
+      {}
       <Animated.View
         style={[
           checkoutStyles.card,
@@ -321,14 +300,14 @@ const CheckoutIllustration: React.FC = () => {
             ],
           },
         ]}>
-        {/* Card top row */}
+        {}
         <View style={checkoutStyles.cardTopRow}>
           <View style={checkoutStyles.cardChip} />
           <Text style={checkoutStyles.cardContactless}>◎</Text>
         </View>
-        {/* Card number */}
+        {}
         <Text style={checkoutStyles.cardNumber}>•••• •••• •••• 4242</Text>
-        {/* Card bottom */}
+        {}
         <View style={checkoutStyles.cardBottomRow}>
           <View>
             <Text style={checkoutStyles.cardLabel}>CARD HOLDER</Text>
@@ -341,7 +320,7 @@ const CheckoutIllustration: React.FC = () => {
         </View>
       </Animated.View>
 
-      {/* Security shield */}
+      {}
       <Animated.View style={[checkoutStyles.shieldRow, { opacity: checkAnim }]}>
         <View style={checkoutStyles.shieldBadge}>
           <Text style={checkoutStyles.shieldEmoji}>🔒</Text>
@@ -349,7 +328,7 @@ const CheckoutIllustration: React.FC = () => {
         </View>
       </Animated.View>
 
-      {/* Payment method pills */}
+      {}
       <Animated.View style={[checkoutStyles.pillsRow, { opacity: checkAnim }]}>
         {['💳 Card', '📱 UPI', 'G Pay', '🍎 Pay'].map((label) => (
           <View key={label} style={checkoutStyles.payPill}>
@@ -361,7 +340,6 @@ const CheckoutIllustration: React.FC = () => {
   );
 };
 
-// ─── Main Component ───────────────────────────────────────────────────────────
 type OnboardingScreenProps = {
   navigation: NativeStackNavigationProp<AuthStackParamList, 'Onboarding'>;
 };
@@ -374,7 +352,7 @@ const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ navigation }) => {
   const scrollX = useRef(new Animated.Value(0)).current;
 
   const onViewableItemsChanged = useCallback(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    
     ({ viewableItems }: { viewableItems: any[] }) => {
       if (viewableItems.length > 0 && viewableItems[0].index != null) {
         setActiveIndex(viewableItems[0].index as number);
@@ -399,9 +377,7 @@ const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ navigation }) => {
 
   const handleGetStarted = () => {
     dispatch(completeOnboarding());
-    // TODO: navigate to Login when auth feature is built
-    // navigation.replace('Login');
-    // For now — reset to show the flow was completed (navigates to Login placeholder)
+    
     navigation.replace('Login');
   };
 
@@ -421,7 +397,7 @@ const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ navigation }) => {
         end={{ x: 1, y: 1 }}
         style={StyleSheet.absoluteFill}
       />
-      {/* Illustration area */}
+      {}
       <View style={styles.illustrationArea}>
         {renderIllustration(item.type)}
       </View>
@@ -433,7 +409,7 @@ const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
-      {/* ── Slide FlatList (gradient backgrounds + illustrations) ── */}
+      {}
       <Animated.FlatList
         ref={flatListRef}
         data={SLIDES}
@@ -452,7 +428,7 @@ const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ navigation }) => {
         style={styles.flatList}
       />
 
-      {/* ── Skip button ── */}
+      {}
       {!isLastSlide && (
         <TouchableOpacity
           style={[styles.skipButton, { top: insets.top + spacing.md }]}
@@ -462,9 +438,9 @@ const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ navigation }) => {
         </TouchableOpacity>
       )}
 
-      {/* ── Bottom Content Card ── */}
+      {}
       <View style={[styles.bottomCard, { paddingBottom: insets.bottom + spacing.lg }]}>
-        {/* Badge */}
+        {}
         <View
           style={[
             styles.badge,
@@ -475,15 +451,15 @@ const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ navigation }) => {
           </Text>
         </View>
 
-        {/* Title */}
+        {}
         <Text style={styles.title}>{currentSlide.title}</Text>
 
-        {/* Subtitle */}
+        {}
         <Text style={styles.subtitle}>{currentSlide.subtitle}</Text>
 
-        {/* ── Dots + CTA Row ── */}
+        {}
         <View style={styles.ctaRow}>
-          {/* Progress dots */}
+          {}
           <View style={styles.dotsContainer}>
             {SLIDES.map((_, i) => {
               const inputRange = [(i - 1) * width, i * width, (i + 1) * width];
@@ -506,7 +482,7 @@ const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ navigation }) => {
             })}
           </View>
 
-          {/* Next / Get Started button */}
+          {}
           <TouchableOpacity onPress={handleNext} activeOpacity={0.85}>
             <LinearGradient
               colors={[colors.primaryGradientStart, colors.primaryGradientEnd]}
@@ -524,7 +500,6 @@ const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ navigation }) => {
   );
 };
 
-// ─── Styles ───────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -541,10 +516,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingTop: '15%',
-    paddingBottom: '45%', // leave room for the bottom card overlay
+    paddingBottom: '45%', 
   },
 
-  // ── Skip ────────────────────────────────────────────────────────────────
   skipButton: {
     position: 'absolute',
     right: spacing.screenPadding,
@@ -561,7 +535,6 @@ const styles = StyleSheet.create({
     letterSpacing: typography.letterSpacing.wide,
   },
 
-  // ── Bottom Card ─────────────────────────────────────────────────────────
   bottomCard: {
     position: 'absolute',
     bottom: 0,
@@ -578,7 +551,6 @@ const styles = StyleSheet.create({
     }),
   },
 
-  // ── Badge ───────────────────────────────────────────────────────────────
   badge: {
     alignSelf: 'flex-start',
     backgroundColor: colors.accentMuted,
@@ -603,7 +575,6 @@ const styles = StyleSheet.create({
     color: colors.success,
   },
 
-  // ── Text ────────────────────────────────────────────────────────────────
   title: {
     fontSize: typography.fontSize['3xl'],
     fontWeight: typography.fontWeight.black,
@@ -620,7 +591,6 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xl,
   },
 
-  // ── CTA Row ─────────────────────────────────────────────────────────────
   ctaRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -650,8 +620,6 @@ const styles = StyleSheet.create({
     letterSpacing: typography.letterSpacing.wide,
   },
 });
-
-// ─── Illustration Styles ──────────────────────────────────────────────────────
 
 const illustrationStyles = StyleSheet.create({
   container: {

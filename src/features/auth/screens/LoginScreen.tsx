@@ -13,11 +13,11 @@ import LinearGradient from 'react-native-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { AlertCircle, Check, Lock, LogIn, Mail } from 'lucide-react-native';
+import { AlertCircle, Check, Lock, Mail } from 'lucide-react-native';
 import { colors, spacing, typography } from '@theme';
 import useAppDispatch from '@shared/hooks/useAppDispatch';
 import useAppSelector from '@shared/hooks/useAppSelector';
-import { clearAuthError, loginSocialUser, loginUser } from '../store/authSlice';
+import { clearAuthError, loginSocialUser, loginUser, resetAuthLoading } from '../store/authSlice';
 import AuthHeader from '../components/AuthHeader';
 import AuthInput from '../components/AuthInput';
 import SocialAuthButtons from '../components/SocialAuthButtons';
@@ -35,6 +35,11 @@ export const LoginScreen: React.FC = () => {
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(true);
   const [formErrors, setFormErrors] = useState<{ email?: string; password?: string }>({});
+
+  React.useEffect(() => {
+    dispatch(clearAuthError());
+    dispatch(resetAuthLoading());
+  }, [dispatch]);
 
   const validate = (): boolean => {
     const errors: { email?: string; password?: string } = {};
@@ -159,10 +164,7 @@ export const LoginScreen: React.FC = () => {
                 {isLoading ? (
                   <ActivityIndicator color={colors.textOnDark} />
                 ) : (
-                  <View style={styles.submitButtonContent}>
-                    <Text style={styles.submitButtonText}>Sign In</Text>
-                    <LogIn size={18} color={colors.textOnDark} style={styles.submitButtonIcon} />
-                  </View>
+                  <Text style={styles.submitButtonText}>Sign In</Text>
                 )}
               </LinearGradient>
             </TouchableOpacity>

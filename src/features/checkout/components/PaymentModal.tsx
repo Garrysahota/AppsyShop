@@ -1,8 +1,3 @@
-/**
- * PaymentModal — AppsyShop
- * Bottom sheet modal to select a payment method or add a new card.
- */
-
 import React, { useState } from 'react';
 import {
   KeyboardAvoidingView,
@@ -32,6 +27,8 @@ import useAppDispatch from '@shared/hooks/useAppDispatch';
 import useAppSelector from '@shared/hooks/useAppSelector';
 import {
   addPaymentMethod,
+  ensureRazorpayMethod,
+  RAZORPAY_PAYMENT_METHOD,
   selectPaymentMethod,
 } from '../store/checkoutSlice';
 import { PaymentMethod } from '../types';
@@ -53,21 +50,28 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
 
   const [isAddingCard, setIsAddingCard] = useState(false);
 
-  // Form State
+  React.useEffect(() => {
+    if (visible) {
+      dispatch(ensureRazorpayMethod());
+    }
+  }, [visible, dispatch]);
+
+  const methodsList = paymentMethods.some(p => p.type === 'razorpay')
+    ? paymentMethods
+    : [RAZORPAY_PAYMENT_METHOD, ...paymentMethods];
+
   const [cardholderName, setCardholderName] = useState('');
   const [cardNumber, setCardNumber] = useState('');
   const [expiry, setExpiry] = useState('');
   const [cvv, setCvv] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
 
-  // Format Card Number (adds space every 4 digits)
   const handleCardNumberChange = (text: string) => {
     const cleaned = text.replace(/\D/g, '').slice(0, 16);
     const formatted = cleaned.match(/.{1,4}/g)?.join(' ') || cleaned;
     setCardNumber(formatted);
   };
 
-  // Format Expiry (MM/YY)
   const handleExpiryChange = (text: string) => {
     const cleaned = text.replace(/\D/g, '').slice(0, 4);
     if (cleaned.length >= 3) {
@@ -124,7 +128,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
             styles.sheetContainer,
             { paddingBottom: Math.max(insets.bottom, 16) + spacing.sm },
           ]}>
-          {/* Header */}
+          {}
           <View style={styles.header}>
             <View style={styles.headerTitleRow}>
               <CreditCard size={18} color={colors.accent} />
@@ -154,7 +158,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
             keyboardShouldPersistTaps="handled">
             
             {isAddingCard ? (
-              /* Add New Card Form */
+              
               <View style={styles.formContainer}>
                 {Boolean(formError) && (
                   <View style={styles.errorBox}>
@@ -228,9 +232,9 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                 </TouchableOpacity>
               </View>
             ) : (
-              /* Payment Methods List */
+              
               <View>
-                {paymentMethods.map(pay => {
+                {methodsList.map(pay => {
                   const isSelected = selectedPaymentId === pay.id;
                   return (
                     <TouchableOpacity
@@ -244,8 +248,14 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                         styles.paymentCard,
                         isSelected && styles.paymentCardSelected,
                       ]}>
-                      <View style={styles.paymentIconCircle}>
-                        {pay.type === 'apple_pay' ? (
+                      <View
+                        style={[
+                          styles.paymentIconCircle,
+                          pay.type === 'razorpay' && styles.razorpayIconCircle,
+                        ]}>
+                        {pay.type === 'razorpay' ? (
+                          <Text style={styles.rzpIconText}>R</Text>
+                        ) : pay.type === 'apple_pay' ? (
                           <Smartphone size={18} color={colors.textOnDark} />
                         ) : (
                           <CreditCard size={18} color={colors.primaryGradientEnd} />
@@ -253,9 +263,18 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                       </View>
 
                       <View style={styles.paymentInfo}>
-                        <Text style={styles.paymentTitle}>{pay.title}</Text>
+                        <View style={styles.paymentTitleRow}>
+                          <Text style={styles.paymentTitle}>{pay.title}</Text>
+                          {pay.type === 'razorpay' && (
+                            <View style={styles.demoBadge}>
+                              <Text style={styles.demoBadgeText}>DEMO ⚡</Text>
+                            </View>
+                          )}
+                        </View>
                         <Text style={styles.paymentSubtitle}>
-                          {pay.type === 'apple_pay'
+                          {pay.type === 'razorpay'
+                            ? 'Google Pay, PhonePe, Paytm, Cards & Netbanking'
+                            : pay.type === 'apple_pay'
                             ? 'Instant Touch / Face ID authorization'
                             : `Expires ${pay.expiryDate || '12/28'}`}
                         </Text>
@@ -268,7 +287,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                   );
                 })}
 
-                {/* Add New Card Button */}
+                {}
                 <TouchableOpacity
                   style={styles.addNewButton}
                   activeOpacity={0.8}
@@ -365,8 +384,34 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  razorpayIconCircle: {
+    backgroundColor: '#0B67D4',
+  },
+  rzpIconText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '900',
+  },
   paymentInfo: {
     flex: 1,
+  },
+  paymentTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  demoBadge: {
+    backgroundColor: 'rgba(245, 158, 11, 0.2)',
+    borderWidth: 1,
+    borderColor: '#F59E0B',
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    borderRadius: 4,
+  },
+  demoBadgeText: {
+    color: '#FBBF24',
+    fontSize: 8,
+    fontWeight: '900',
   },
   paymentTitle: {
     color: colors.textOnDark,

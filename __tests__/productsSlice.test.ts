@@ -15,6 +15,8 @@ describe('productsSlice', () => {
     searchQuery: '',
     favorites: ['snk-1'],
     filters: DEFAULT_FILTERS,
+    location: 'Manhattan, NY',
+    isLocationLoading: false,
     isLoading: false,
     error: null,
   };
@@ -25,11 +27,10 @@ describe('productsSlice', () => {
   });
 
   it('should toggle favorite product', () => {
-    // Remove existing favorite
+    
     const stateAfterRemove = productsReducer(initialTestState, toggleFavorite('snk-1'));
     expect(stateAfterRemove.favorites).not.toContain('snk-1');
 
-    // Add new favorite
     const stateAfterAdd = productsReducer(stateAfterRemove, toggleFavorite('snk-2'));
     expect(stateAfterAdd.favorites).toContain('snk-2');
   });

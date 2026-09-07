@@ -1,9 +1,4 @@
-/**
- * CustomBottomTabBar — AppsyShop
- * Floating dark glassmorphism bottom navigation bar with active glow pill and live cart badge.
- */
-
-import React from 'react';
+import React, { useCallback, useMemo } from 'react';
 import {
   Platform,
   StyleSheet,
@@ -24,53 +19,113 @@ import {
 import { colors, spacing, typography } from '@theme';
 import useAppSelector from '@shared/hooks/useAppSelector';
 
+const TabIcon = React.memo(({ name, isFocused, cartItemsCount }: { name: string; isFocused: boolean; cartItemsCount: number }) => {
+  const iconColor = isFocused ? colors.textOnDark : 'rgba(255, 255, 255, 0.5)';
+  const size = 20;
+
+  switch (name) {
+    case 'Home':
+      return <Home size={size} color={iconColor} />;
+    case 'Search':
+      return <Search size={size} color={iconColor} />;
+    case 'Cart':
+      return (
+        <View style={styles.cartIconContainer}>
+          <ShoppingBag size={size} color={iconColor} />
+          {cartItemsCount > 0 && (
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>
+                {cartItemsCount > 9 ? '9+' : cartItemsCount}
+              </Text>
+            </View>
+          )}
+        </View>
+      );
+    case 'Orders':
+      return <Flame size={size} color={iconColor} />;
+    case 'Profile':
+      return <User size={size} color={iconColor} />;
+    default:
+      return <Home size={size} color={iconColor} />;
+  }
+});
+
+interface TabBarButtonProps {
+  routeName: string;
+  routeKey: string;
+  label: string;
+  isFocused: boolean;
+  onPress: (routeName: string, routeKey: string, isFocused: boolean) => void;
+  cartItemsCount: number;
+}
+
+const TabBarButton = React.memo(({
+  routeName,
+  routeKey,
+  label,
+  isFocused,
+  onPress,
+  cartItemsCount,
+}: TabBarButtonProps) => {
+  const handlePress = () => {
+    onPress(routeName, routeKey, isFocused);
+  };
+
+  return (
+    <TouchableOpacity
+      accessibilityRole="button"
+      accessibilityState={isFocused ? { selected: true } : {}}
+      onPress={handlePress}
+      activeOpacity={0.9}
+      style={styles.tabButton}>
+      {isFocused ? (
+        <LinearGradient
+          colors={[colors.primaryGradientStart, colors.primaryGradientEnd]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={styles.activePill}>
+          <TabIcon name={routeName} isFocused={true} cartItemsCount={cartItemsCount} />
+          <Text style={styles.activeLabel}>{label}</Text>
+        </LinearGradient>
+      ) : (
+        <View style={styles.inactivePill}>
+          <TabIcon name={routeName} isFocused={false} cartItemsCount={cartItemsCount} />
+        </View>
+      )}
+    </TouchableOpacity>
+  );
+});
+
 export const CustomBottomTabBar: React.FC<BottomTabBarProps> = ({
   state,
   descriptors,
   navigation,
 }) => {
   const insets = useSafeAreaInsets();
+  
   const cartItemsCount = useAppSelector(s =>
     s.cart.items.reduce((total, item) => total + item.quantity, 0),
   );
 
-  const getTabIcon = (routeName: string, isFocused: boolean) => {
-    const iconColor = isFocused ? colors.textOnDark : 'rgba(255, 255, 255, 0.5)';
-    const size = 20;
+  const wrapperStyle = useMemo(() => [
+    styles.wrapper,
+    { bottom: Math.max(insets.bottom, 12) + (Platform.OS === 'ios' ? 4 : 8) },
+  ], [insets.bottom]);
 
-    switch (routeName) {
-      case 'Home':
-        return <Home size={size} color={iconColor} />;
-      case 'Search':
-        return <Search size={size} color={iconColor} />;
-      case 'Cart':
-        return (
-          <View style={styles.cartIconContainer}>
-            <ShoppingBag size={size} color={iconColor} />
-            {cartItemsCount > 0 && (
-              <View style={styles.badge}>
-                <Text style={styles.badgeText}>
-                  {cartItemsCount > 9 ? '9+' : cartItemsCount}
-                </Text>
-              </View>
-            )}
-          </View>
-        );
-      case 'Orders':
-        return <Flame size={size} color={iconColor} />;
-      case 'Profile':
-        return <User size={size} color={iconColor} />;
-      default:
-        return <Home size={size} color={iconColor} />;
+  const handlePress = useCallback((routeName: string, routeKey: string, isFocused: boolean) => {
+    const event = navigation.emit({
+      type: 'tabPress',
+      target: routeKey,
+      canPreventDefault: true,
+    });
+
+    if (!isFocused && !event.defaultPrevented) {
+      navigation.navigate(routeName);
     }
-  };
+  }, [navigation]);
 
   return (
-    <View
-      style={[
-        styles.wrapper,
-        { bottom: Math.max(insets.bottom, 12) + (Platform.OS === 'ios' ? 4 : 8) },
-      ]}>
+    <View style={wrapperStyle}>
       <View style={styles.glassContainer}>
         {state.routes.map((route, index) => {
           const { options } = descriptors[route.key];
@@ -78,48 +133,21 @@ export const CustomBottomTabBar: React.FC<BottomTabBarProps> = ({
             options.tabBarLabel !== undefined
               ? options.tabBarLabel
               : options.title !== undefined
-              ? options.title
-              : route.name;
+                ? options.title
+                : route.name;
 
           const isFocused = state.index === index;
 
-          const onPress = () => {
-            const event = navigation.emit({
-              type: 'tabPress',
-              target: route.key,
-              canPreventDefault: true,
-            });
-
-            if (!isFocused && !event.defaultPrevented) {
-              navigation.navigate(route.name);
-            }
-          };
-
           return (
-            <TouchableOpacity
+            <TabBarButton
               key={route.key}
-              accessibilityRole="button"
-              accessibilityState={isFocused ? { selected: true } : {}}
-              accessibilityLabel={options.tabBarAccessibilityLabel}
-              testID={options.tabBarButtonTestID}
-              onPress={onPress}
-              activeOpacity={0.8}
-              style={styles.tabButton}>
-              {isFocused ? (
-                <LinearGradient
-                  colors={[colors.primaryGradientStart, colors.primaryGradientEnd]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={styles.activePill}>
-                  {getTabIcon(route.name, true)}
-                  <Text style={styles.activeLabel}>{String(label)}</Text>
-                </LinearGradient>
-              ) : (
-                <View style={styles.inactivePill}>
-                  {getTabIcon(route.name, false)}
-                </View>
-              )}
-            </TouchableOpacity>
+              routeName={route.name}
+              routeKey={route.key}
+              label={String(label)}
+              isFocused={isFocused}
+              onPress={handlePress}
+              cartItemsCount={cartItemsCount}
+            />
           );
         })}
       </View>
@@ -160,7 +188,7 @@ const styles = StyleSheet.create({
   activePill: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
+    paddingHorizontal: 8,
     paddingVertical: 8,
     borderRadius: 20,
     gap: 6,
