@@ -1,97 +1,199 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+# 👟 AppsyShop — Limited Sneaker Drops & Streetwear E-Commerce Platform
 
-# Getting Started
+AppsyShop is a state-of-the-art, feature-rich React Native mobile application built for high-heat sneaker launches, streetwear collections, and luxury footwear. It features real-time drop countdowns, localized currency engines, Indian/UK size preferences, Razorpay payment flows, and Firebase authentication.
 
-> **Note**: Make sure you have completed the [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) guide before proceeding.
+---
 
-## Step 1: Start Metro
+## 🌟 Key Features
 
-First, you will need to run **Metro**, the JavaScript build tool for React Native.
+### ⚡ Live Sneaker Drops & Flash Sales
+- **Real-Time Drop Timers**: Countdown timers for upcoming limited-edition sneaker releases.
+- **Hot Drop Badges & Stock Indicators**: Visual cues for low stock, rare drops, and exclusive discounts.
 
-To start the Metro dev server, run the following command from the root of your React Native project:
+### 🌍 Dynamic Localized Currency Engine
+- **Auto-Location Detection**: Automatically identifies whether the user is located in India or international regions using IP & GPS geolocation.
+- **Localized Formatting**: Renders prices seamlessly in Indian Rupees (`₹`) or US Dollars (`$`) across all product cards, cart, and checkout summaries.
+- **Manual Currency Switcher**: Interactive selector inside Profile settings to toggle preferences on demand.
 
-```sh
-# Using npm
-npm start
+### 👟 Indian / UK Shoe Size Preference System
+- Customized sneaker size selection adhering to UK / Indian footwear standards.
+- Preference persistence using high-performance MMKV storage across filters and checkout flows.
 
-# OR using Yarn
-yarn start
+### 💳 Complete Checkout & Razorpay Integration
+- **Razorpay Checkout**: Seamless payment simulation supporting:
+  - **UPI Apps**: Google Pay, PhonePe, Paytm, BHIM, and custom VPAs.
+  - **Cards**: Auto-fill test card simulator with 3D Secure OTP verification.
+  - **Netbanking**: Major Indian banks (HDFC, ICICI, SBI, Axis, Kotak).
+  - **Wallets**: Amazon Pay, Mobikwik.
+- **Order Tracking & Digital Verification**: Order confirmation screen with real-time ETA countdowns and NFC authentication tags.
+
+### ⚡ 60 FPS Native Performance & Premium Dark-Mode UI
+- **Native-Driven Animations**: Custom bottom sheet filters powered by `useNativeDriver: true` and `translateY` transforms.
+- **Memoized Navigation**: Tab bar rendering optimized to prevent redundant SVG re-renders and eliminate navigation delays.
+- **Neon Glassmorphism Aesthetic**: Rich dark theme with vibrant gradients.
+
+---
+
+## 🏗️ Architecture & Project Structure
+
+The codebase is organized following feature-based architecture principles:
+
+```text
+AppsyShop/
+├── android/                   # Android native project files & Gradle build configs
+├── ios/                       # iOS native Xcode project files & Podfile
+├── src/
+│   ├── app/                   # App root setup & navigation navigators
+│   │   ├── navigation/        # RootNavigator, MainTabNavigator, CustomBottomTabBar
+│   ├── features/              # Feature modules (Domain-driven structure)
+│   │   ├── auth/              # Firebase Authentication, Login/Register screens
+│   │   ├── cart/              # Cart management, state slice, components
+│   │   ├── checkout/          # Razorpay Modal, Address Modal, Order Success
+│   │   ├── notifications/     # Notifications feed & preferences
+│   │   ├── products/          # Product details, filtering bottom sheet, search
+│   │   └── profile/           # User profile, size & currency modals
+│   ├── shared/                # Decoupled utilities, services, & shared components
+│   │   ├── hooks/             # Typed Redux hooks (useAppDispatch, useAppSelector)
+│   │   ├── services/          # Location service & API clients
+│   │   ├── store/             # Global preferences slice (Currency & Region)
+│   │   └── utils/             # Currency formatters & helpers
+│   ├── store/                 # Redux Toolkit store configuration & MMKV persistence
+│   └── theme/                 # Design tokens, color palette, typography & spacing
+├── App.tsx                    # Main App entrance & Redux Persist Provider
+├── index.js                   # App registry entry point
+└── package.json               # Dependencies & scripts
 ```
 
-## Step 2: Build and run your app
+---
 
-With Metro running, open a new terminal window/pane from the root of your React Native project, and use one of the following commands to build and run your Android or iOS app:
+## 🛠️ Tech Stack & Libraries
 
-### Android
+- **Framework**: React Native `0.76+`
+- **Language**: TypeScript
+- **State Management**: Redux Toolkit & Redux Persist
+- **Local Storage**: `react-native-mmkv`
+- **Backend & Auth**: Firebase Auth & Cloud Firestore (`@react-native-firebase/auth`, `@react-native-firebase/firestore`)
+- **Payment Gateway**: Razorpay Integration
+- **Navigation**: React Navigation (Native Stack & Bottom Tabs)
+- **Icons & UI Effects**: Lucide Icons (`lucide-react-native`) & Linear Gradients (`react-native-linear-gradient`)
 
-```sh
-# Using npm
-npm run android
+---
 
-# OR using Yarn
-yarn android
+## 🚀 Getting Started & Installation Guide
+
+### Prerequisites
+
+Ensure your environment is set up with the following tooling:
+- **Node.js**: `v18.0.0` or higher
+- **JDK**: OpenJDK 17
+- **Android Studio**: Android SDK (API 34+), Android SDK Build-Tools
+- **Xcode**: 15+ (for macOS iOS builds)
+- **CocoaPods**: (for iOS dependencies)
+
+### Step 1: Clone the Repository
+
+```bash
+git clone https://github.com/Garrysahota/AppsyShop.git
+cd AppsyShop
 ```
 
-### iOS
+### Step 2: Install Dependencies
 
-For iOS, remember to install CocoaPods dependencies (this only needs to be run on first clone or after updating native deps).
-
-The first time you create a new project, run the Ruby bundler to install CocoaPods itself:
-
-```sh
-bundle install
+```bash
+npm install
 ```
 
-Then, and every time you update your native dependencies, run:
+### Step 3: Configure Android Google Services (Firebase)
 
-```sh
-bundle exec pod install
+1. Obtain `google-services.json` from your Firebase Console.
+2. Place `google-services.json` inside the `android/app/` folder:
+   ```text
+   android/app/google-services.json
+   ```
+3. Ensure your **Debug** and **Release** SHA-1 fingerprints are registered in Firebase Project Settings:
+   - To obtain SHA-1 for Debug keystore:
+     ```bash
+     keytool -list -v -keystore android/app/debug.keystore -alias androiddebugkey -storepass android
+     ```
+   - To obtain SHA-1 for Release keystore:
+     ```bash
+     keytool -list -v -keystore android/app/appsyshop-release-key.keystore -alias appsyshop-key-alias
+     ```
+
+---
+
+## 📱 Running the Application
+
+### Start the Metro Bundler
+
+```bash
+npx react-native start
 ```
 
-For more information, please visit [CocoaPods Getting Started guide](https://guides.cocoapods.org/using/getting-started.html).
+### Run on Android (Device or Emulator)
 
-```sh
-# Using npm
-npm run ios
+Connect your physical Android device via USB (with USB Debugging enabled) or start an Android Virtual Device (AVD), then execute:
 
-# OR using Yarn
-yarn ios
+```bash
+npx react-native run-android
 ```
 
-If everything is set up correctly, you should see your new app running in the Android Emulator, iOS Simulator, or your connected device.
+### Run on iOS Simulator (macOS only)
 
-This is one way to run your app — you can also build it directly from Android Studio or Xcode.
+```bash
+cd ios && pod install && cd ..
+npx react-native run-ios
+```
 
-## Step 3: Modify your app
+---
 
-Now that you have successfully run the app, let's make changes!
+## 📦 Building Signed Release APK for Production
 
-Open `App.tsx` in your text editor of choice and make some changes. When you save, your app will automatically update and reflect these changes — this is powered by [Fast Refresh](https://reactnative.dev/docs/fast-refresh).
+To build a signed production release APK:
 
-When you want to forcefully reload, for example to reset the state of your app, you can perform a full reload:
+### 1. Generate / Verify Release Keystore
 
-- **Android**: Press the <kbd>R</kbd> key twice or select **"Reload"** from the **Dev Menu**, accessed via <kbd>Ctrl</kbd> + <kbd>M</kbd> (Windows/Linux) or <kbd>Cmd ⌘</kbd> + <kbd>M</kbd> (macOS).
-- **iOS**: Press <kbd>R</kbd> in iOS Simulator.
+The release keystore configuration is set in `android/gradle.properties`:
 
-## Congratulations! :tada:
+```properties
+APPSYSHOP_RELEASE_STORE_FILE=appsyshop-release-key.keystore
+APPSYSHOP_RELEASE_KEY_ALIAS=appsyshop-key-alias
+APPSYSHOP_RELEASE_STORE_PASSWORD=YourSecurePassword
+APPSYSHOP_RELEASE_KEY_PASSWORD=YourSecurePassword
+```
 
-You've successfully run and modified your React Native App. :partying_face:
+### 2. Execute Assemble Release Command
 
-### Now what?
+```bash
+cd android
+./gradlew assembleRelease
+```
 
-- If you want to add this new React Native code to an existing application, check out the [Integration guide](https://reactnative.dev/docs/integration-with-existing-apps).
-- If you're curious to learn more about React Native, check out the [docs](https://reactnative.dev/docs/getting-started).
+### 3. Output APK Location
 
-# Troubleshooting
+Upon successful build completion, the APK will be generated at:
+```text
+android/app/build/outputs/apk/release/app-release.apk
+```
 
-If you're having issues getting the above steps to work, see the [Troubleshooting](https://reactnative.dev/docs/troubleshooting) page.
+---
 
-# Learn More
+## 🧪 Testing & Code Quality Verification
 
-To learn more about React Native, take a look at the following resources:
+### Run Type Checking
 
-- [React Native Website](https://reactnative.dev) - learn more about React Native.
-- [Getting Started](https://reactnative.dev/docs/environment-setup) - an **overview** of React Native and how setup your environment.
-- [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
-- [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
-- [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
+```bash
+npx tsc --noEmit
+```
+
+### Run Unit Test Suite
+
+```bash
+npm test
+```
+
+---
+
+## 📄 License
+
+This project is open-source and available under the [MIT License](LICENSE).
